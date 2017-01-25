@@ -155,10 +155,56 @@ class HideMyAss extends \Oara\Network
         $urls = array();
         $urls[] = new \Oara\Curl\Request('https://affiliate.hidemyass.com/reports', array());
         $exportReport = $this->_client->get($urls);
-        $urls = array();
-        $urls[] = new \Oara\Curl\Request('https://affiliate.hidemyass.com/reports/index_date', array());
-        $exportReport = $this->_client->get($urls);
 
+        $doc = new \DOMDocument();
+        @$doc->loadHTML($exportReport[0]);
+        $xpath = new \DOMXPath($doc);
+        $hidden = $xpath->query('//input[@type="hidden"]');
+        foreach ($hidden as $values) {
+            $valuesFromExport[] = new \Oara\Curl\Parameter($values->getAttribute("name"), $values->getAttribute("value"));
+        }
+
+        $valuesFromExport[] = new \Oara\Curl\Parameter('_method', 'POST');
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][dateselect]', '4');
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][datetype]', '2');
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][daterangefrom][day]', $dStartDate->format("d"));
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][daterangefrom][month]', $dStartDate->format("m"));
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][daterangefrom][year]', $dStartDate->format("Y"));
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][daterangefrom][day]', $dStartDate->format("d"));
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][daterangefrom][month]', $dStartDate->format("m"));
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][daterangefrom][year]', $dStartDate->format("Y"));
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][daterangeto][day]', $dEndDate->format("d"));
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][daterangeto][month]', $dEndDate->format("m"));
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][daterangeto][year]', $dEndDate->format("Y"));
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][daterangeto][day]', $dEndDate->format("d"));
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][daterangeto][month]', $dEndDate->format("m"));
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][daterangeto][year]', $dEndDate->format("Y"));
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][themetype]', '1');
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][Theme][Theme]', '');
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][Query][query]', '');
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][country]', '');
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][order][new]', '0');
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][order][rec]', '0');
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][order][refund]', '0');
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][order][refund]', '1');
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][order][fraud]', '0');
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][order][fraud]', '1');
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][month1]', '0');
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][month1]', '1');
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][month6]', '0');
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][month6]', '1');
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][month12]', '0');
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][month12]', '1');
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][referaldate]', '0');
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][visits]', '0');
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][collapsed]', '0');
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][collapsed]', '1');
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][output]', 'raw_csv');
+        $valuesFromExport[] = new \Oara\Curl\Parameter('data[Conditions][chart]', 'count');
+
+        $urls = array();
+        $urls[] = new \Oara\Curl\Request('https://affiliate.hidemyass.com/reports/index_date?', $valuesFromExport);
+        $exportReport = $this->_client->get($urls);
         $exportData = \str_getcsv($exportReport[0], "\n");
 
         $num = \count($exportData);
@@ -166,7 +212,6 @@ class HideMyAss extends \Oara\Network
             $transactionExportArray = \str_getcsv($exportData[$i], ";");
             $transaction = Array();
             $transaction['merchantId'] = 1;
-            $transaction['unique_id'] = $transactionExportArray[5].'-'.$transactionExportArray[1];
             $transaction['date'] = $transactionExportArray[1];
             $transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
             $transaction['amount'] = \Oara\Utilities::parseDouble($transactionExportArray[8]);

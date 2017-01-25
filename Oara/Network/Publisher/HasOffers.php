@@ -42,7 +42,7 @@ class HasOffers extends \Oara\Network
         \ini_set('default_socket_timeout', '120');
 
         $this->_domain = $credentials["domain"];
-        $this->_apiPassword = $credentials["apipassword"];
+        $this->_apiPassword = $credentials["apiPassword"];
 
     }
 
@@ -54,13 +54,13 @@ class HasOffers extends \Oara\Network
         $credentials = array();
 
         $parameter = array();
-        $parameter["description"] = "Your Network ID ";
+        $parameter["description"] = "Domain Ex:www.mydomain.com";
         $parameter["required"] = true;
         $parameter["name"] = "Domain";
         $credentials["domain"] = $parameter;
 
         $parameter = array();
-        $parameter["description"] = "API Key";
+        $parameter["description"] = "API Password";
         $parameter["required"] = true;
         $parameter["name"] = "API";
         $credentials["apipassword"] = $parameter;

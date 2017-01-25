@@ -66,7 +66,7 @@ class Effiliation extends \Oara\Network
     {
         $connection = false;
 
-        $content = \file_get_contents('http://api.effiliation.com/apiv2/transaction.csv?key=' . $this->_credentials["apipassword"]);
+        $content = \file_get_contents('http://api.effiliation.com/apiv2/transaction.csv?key=' . $this->_credentials["apiPassword"]);
         if (!\preg_match("/bad credentials !/", $content, $matches)) {
             $connection = true;
         }
@@ -79,7 +79,7 @@ class Effiliation extends \Oara\Network
     public function getMerchantList()
     {
         $merchants = array();
-        $url = 'http://api.effiliation.com/apiv2/programs.xml?key=' . $this->_credentials["apipassword"] . "&filter=active";
+        $url = 'http://api.effiliation.com/apiv2/programs.xml?key=' . $this->_credentials["apiPassword"] . "&filter=active";
         $content = @\file_get_contents($url);
         $xml = \simplexml_load_string($content, null, LIBXML_NOERROR | LIBXML_NOWARNING);
         foreach ($xml->program as $merchant) {
@@ -104,7 +104,7 @@ class Effiliation extends \Oara\Network
 
         $merchantIdList = \Oara\Utilities::getMerchantIdMapFromMerchantList($merchantList);
 
-        $url = 'http://api.effiliation.com/apiv2/transaction.csv?key=' . $this->_credentials["apipassword"] . '&start=' . $dStartDate->format("d/m/Y") . '&end=' . $dEndDate->format("d/m/Y") . '&type=date';
+        $url = 'http://api.effiliation.com/apiv2/transaction.csv?key=' . $this->_credentials["apiPassword"] . '&start=' . $dStartDate->format("d/m/Y") . '&end=' . $dEndDate->format("d/m/Y") . '&type=date';
         $content = \utf8_encode(\file_get_contents($url));
         $exportData = \str_getcsv($content, "\n");
         $num = \count($exportData);
@@ -128,12 +128,9 @@ class Effiliation extends \Oara\Network
                     if ($transactionExportArray[9] == 'Attente') {
                         $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
                     } else
-                        if ($transactionExportArray[9] == 'Refusé' || $transactionExportArray[9] == 'Refuse') {
+                        if ($transactionExportArray[9] == 'Refusé') {
                             $transaction['status'] = \Oara\Utilities::STATUS_DECLINED;
-                        } else {
-                            throw new \Exception("New status {$transactionExportArray[9]}");
                         }
-
                 $transaction['amount'] = \Oara\Utilities::parseDouble($transactionExportArray[7]);
                 $transaction['commission'] = \Oara\Utilities::parseDouble($transactionExportArray[8]);
                 $totalTransactions[] = $transaction;

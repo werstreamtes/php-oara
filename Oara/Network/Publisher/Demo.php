@@ -99,10 +99,10 @@ class Demo extends \Oara\Network
             $transactionDate = self::randomDate($dStartDate->format("Y-m-d H:i:s"), $dEndDate->format("Y-m-d H:i:s"));
             $merchantIndex = \rand(0, \count($merchantList) - 1);
             $transaction = array();
-            $transaction['unique_id'] = \md5(\mt_rand() . $transactionDate);
+            $transaction['unique_id'] = \md5(\mt_rand() . $transactionDate->format("Y-m-d H:i:s"));
             $transaction['custom_id'] = "my_custom_id";
-            $transaction['merchantId'] = $merchantList[$merchantIndex]["cid"];
-            $transaction['date'] = $transactionDate;
+            $transaction['merchantId'] = $merchantList[$merchantIndex];
+            $transaction['date'] = $transactionDate->format("Y-m-d H:i:s");
             $transactionAmount = \rand(1, 1000);
             $transaction['amount'] = $transactionAmount;
             $transaction['commission'] = $transactionAmount / 10;
@@ -135,11 +135,11 @@ class Demo extends \Oara\Network
     public function getPaymentHistory()
     {
         $paymentHistory = array();
-        $startDate = new \DateTime('2015-01-01');
+        $startDate = new \DateTime('01-01-2015', 'dd-MM-yyyy');
         $endDate = new \DateTime();
         $diff = $startDate->diff($endDate);
         $monthsDifference = (int) $diff->format('%m');
-        for ($i = 0; $i <= $monthsDifference; $i++) {
+        for ($i = 0; $i < $monthsDifference; $i++) {
             $obj = array();
             $obj['date'] = $startDate->format("Y-m-d H:i:s");
             $value = \rand(1, 1300);

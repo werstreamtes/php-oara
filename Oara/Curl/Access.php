@@ -123,7 +123,7 @@ class Access
      * @return array
      * @throws \Exception
      */
-    public function post(array $urls, $deep = 0, $allowEmptyResult = false)
+    public function post(array $urls, $deep = 0)
     {
         $results = array();
         $curlResults = array();
@@ -164,7 +164,7 @@ class Access
                 $ch = $done ['handle'];
                 $chId = ( int )$ch;
                 $done_content = \curl_multi_getcontent($ch);
-                if (!$allowEmptyResult && $done_content == false) {
+                if ($done_content == false) {
                     if ($deep == 5) {
                         throw new \Exception ('Fail in CURL access in POST, getcontent');
                     }
@@ -245,7 +245,7 @@ class Access
      * @throws Exception
      * @throws \Exception
      */
-    public function get(array $urls, $deep = 0, $allowEmptyResult = false)
+    public function get(array $urls, $deep = 0)
     {
         $results = array();
         $curlResults = array();
@@ -282,7 +282,7 @@ class Access
                 $ch = $done ['handle'];
                 $chId = ( int )$ch;
                 $done_content = \curl_multi_getcontent($ch);
-                if (!$allowEmptyResult && $done_content == false) {
+                if ($done_content == false) {
                     if ($deep == 5) {
                         throw new \Exception ('Fail in CURL access in GET, getcontent');
                     }

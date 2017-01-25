@@ -35,7 +35,7 @@ class CommissionJunction extends \Oara\Network
     private $_accountId = null;
     private $_apiPassword = null;
     protected $_sitesAllowed = array ();
-    public $_includeBonus = true;
+
     /**
      * @param $credentials
      */
@@ -206,7 +206,7 @@ class CommissionJunction extends \Oara\Network
 
         $iteration = self::calculeIterationNumber(\count($merchantIdArray), '20');
         for ($it = 0; $it < $iteration; $it++) {
-            //echo "iteration $it of $iteration \n\n";
+            echo "iteration $it of $iteration \n\n";
             $merchantSlice = \array_slice($merchantIdArray, $it * 20, 20);
             try {
 
@@ -217,7 +217,7 @@ class CommissionJunction extends \Oara\Network
             } catch (\Exception $e) {
                 $amountDays = $dStartDate->diff($dEndDate)->days;
                 $auxDate = clone $dStartDate;
-                for ($j = 0; $j <= $amountDays; $j++) {
+                for ($j = 0; $j < $amountDays; $j++) {
                     $transactionDateEnd = clone $auxDate;
                     $transactionDateEnd->add(new \DateInterval('P1D'));
                     $restUrl = 'https://commission-detail.api.cj.com/v3/commissions?cids=' . \implode(',', $merchantSlice) . '&date-type=posting&start-date=' . $auxDate->format("Y-m-d") . '&end-date=' . $transactionDateEnd->format("Y-m-d");
@@ -232,7 +232,7 @@ class CommissionJunction extends \Oara\Network
                                 $done = true;
                             } catch (\Exception $e) {
                                 $try++;
-                                //echo "try again $try\n\n";
+                                echo "try again $try\n\n";
                             }
                         }
                         if ($try == 5) {
@@ -278,10 +278,7 @@ class CommissionJunction extends \Oara\Network
                 if (\count($this->_sitesAllowed) == 0 || \in_array ( ( int ) self::findAttribute ( $singleTransaction, 'website-id' ), $this->_sitesAllowed )) {
 
                     if (isset($merchantIdList[(int)self::findAttribute($singleTransaction, 'cid')])) {
-                        $type = self::findAttribute($singleTransaction, 'action-type');
-                        if (!$this->_includeBonus && $type == "bonus"){
-                            continue;
-                        }
+
                         $transaction = Array();
                         $transaction ['unique_id'] = self::findAttribute($singleTransaction, 'original-action-id');
                         $transaction ['action'] = self::findAttribute($singleTransaction, 'action-type');
@@ -293,6 +290,7 @@ class CommissionJunction extends \Oara\Network
                             $transaction['custom_id'] = self::findAttribute($singleTransaction, 'sid');
                         }
 
+                        //$transaction['unique_id'] = self::findAttribute($singleTransaction, 'commission-id');
                         $transaction ['amount'] = \Oara\Utilities::parseDouble(self::findAttribute($singleTransaction, 'sale-amount'));
                         $transaction ['commission'] = \Oara\Utilities::parseDouble(self::findAttribute($singleTransaction, 'commission-amount'));
 
@@ -367,7 +365,7 @@ class CommissionJunction extends \Oara\Network
                 if (isset($invoices[$i + 1])) {
                     $startDate = $invoices[$i + 1]['date'];
                 } else {
-                    $startDate = \date("Y-m-d", \strtotime($invoices[$i]['date']) - (90 * 60 * 60 * 24));
+                    $startDate = \date("Y-m-d", \strtotime($invoices[i]['date']) - (90 * 60 * 60 * 24));
                 }
                 break;
             }
@@ -383,15 +381,13 @@ class CommissionJunction extends \Oara\Network
         }
         foreach ($advertiserPaymentIds as $id) {
             $exportReport = $this->_client->get(array(new \Oara\Curl\Request('https://members.cj.com/member/publisher/' . $this->_accountId . '/commissionReport/detailForTransactionId.json?allowAllDateRanges=true&txnId=' . $id . '&columnSort=publisherCommission%09DESC&startRow=1&endRow=1000', array())));
-            if (isset(\json_decode($exportReport[0])->{'records'}->{'record'})) {
-                $transactions = \json_decode($exportReport[0])->{'records'}->{'record'};
-                if (!isset($transactions->{'advertiserId'})) {
-                    foreach ($transactions as $transaction) {
-                        $transactionList[] = $transaction->{'commissionId'};
-                    }
-                } else {
-                    $transactionList[] = $transactions->{'commissionId'};
+            $transactions = \json_decode($exportReport[0])->{'records'}->{'record'};
+            if (!isset($transactions->{'advertiserId'})) {
+                foreach ($transactions as $transaction) {
+                    $transactionList[] = $transaction->{'commissionId'};
                 }
+            } else {
+                $transactionList[] = $transactions->{'commissionId'};
             }
         }
         return $transactionList;
@@ -425,14 +421,11 @@ class CommissionJunction extends \Oara\Network
                 if (!$date) {
                     $date = \DateTime::createFromFormat("d-M-Y H:i \P\D\T", $paymentData[0]);
                 }
-                if ($date){
-                    $obj['date'] = $date->format("Y-m-d H:i:s");
-                    $obj['value'] = \Oara\Utilities::parseDouble($paymentData[1]);
-                    $obj['method'] = $paymentData[2];
-                    $obj['pid'] = $paymentData[6];
-                    $paymentHistory[] = $obj;
-                }
-
+                $obj['date'] = $date->format("Y-m-d H:i:s");
+                $obj['value'] = \Oara\Utilities::parseDouble($paymentData[1]);
+                $obj['method'] = $paymentData[2];
+                $obj['pid'] = $paymentData[6];
+                $paymentHistory[] = $obj;
             }
         }
         return $paymentHistory;

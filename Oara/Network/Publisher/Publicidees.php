@@ -32,7 +32,6 @@ namespace Oara\Network\Publisher;
 class Publicidees extends \Oara\Network
 {
     private $_client = null;
-    private $_sites = array();
 
     /**
      * @param $credentials
@@ -43,11 +42,11 @@ class Publicidees extends \Oara\Network
         $user = $credentials['user'];
         $password = $credentials['password'];
         $this->_client = new \Oara\Curl\Access($credentials);
-        $loginUrl = 'http://performance.timeonegroup.com/logmein.php';
+
+        $loginUrl = 'http://es.publicideas.com/logmein.php';
         $valuesLogin = array(new \Oara\Curl\Parameter('loginAff', $user),
             new \Oara\Curl\Parameter('passAff', $password),
-            new \Oara\Curl\Parameter('userType', 'aff'),
-            new \Oara\Curl\Parameter('site', 'pi')
+            new \Oara\Curl\Parameter('userType', 'aff')
         );
 
         $urls = array();
@@ -110,85 +109,11 @@ class Publicidees extends \Oara\Network
     public function getMerchantList()
     {
         $merchants = array();
-        $merchantsMap = array();
 
-        // Get sites
-        $urls = array();
-        $urls[] = new \Oara\Curl\Request('http://publisher.publicideas.com/index.php', array());
-        $exportReport = $this->_client->get($urls);
-        $doc = new \DOMDocument();
-        @$doc->loadHTML($exportReport[0]);
-        $xpath = new \DOMXPath($doc);
-        $results = $xpath->query('//form[@action="reconnect.php"]/descendant::select[@name="site"]/child::option');
-        foreach ($results as $values) {
-            $siteId = $values->getAttribute("value");
-            $siteName = $values->textContent;
-            if (!isset($this->_sites[$siteId])) {
-                $this->_sites[$siteId] = $siteName;
-                $valuesLogin = array(
-                    new \Oara\Curl\Parameter('site', $siteId),
-                    new \Oara\Curl\Parameter('page', '/index.php?'),
-                );
-                $urls = array();
-                $urls[] = new \Oara\Curl\Request('http://publisher.publicideas.com/reconnect.php', $valuesLogin);
-                $this->_client->post($urls);
-
-                // Get the first page of programs.
-                $programsPerPage = 100;
-                $valuesPost = array(
-                    new \Oara\Curl\Parameter('nb_page', $programsPerPage),
-                    new \Oara\Curl\Parameter('action', 'myprograms'),
-                    new \Oara\Curl\Parameter('type', ''),
-                    new \Oara\Curl\Parameter('keyword', ''),
-                );
-                $urls = array();
-                $urls[] = new \Oara\Curl\Request('http://publisher.publicideas.com/index.php?action=myprograms', $valuesPost);
-                $exportReport = $this->_client->post($urls);
-                if (preg_match_all('/onclick="document.location.href=\'index.php\?action=moreallstats&progid=(.+)\';"/', $exportReport[0], $match)
-                    && preg_match_all('/<td width="100%" class="progTitreF">(.+) &laquo;<\/td>/', $exportReport[0], $match2)
-                ) {
-                    for ($i = 0; $i < count($match[1]); $i++) {
-                        $cid = $match[1][$i];
-                        $name = $match2[1][$i];
-                        if (!isset($merchantsMap[$cid])) {
-                            $merchant = array();
-                            $merchant['cid'] = $cid;
-                            $merchant['name'] = $name;
-                            $merchants[] = $merchant;
-                            $merchantsMap[$cid] = true;
-                        }
-                    }
-                }
-
-                // Get nex pages of programs if they exist.
-                if (preg_match_all('/href="\?action=myprograms&type=&keyword=&nb_page=' . $programsPerPage . '&index=(\d+)&nb_page=' . $programsPerPage . '"/', $exportReport[0], $match)) {
-                    $pages = count($match[1]) / 2;
-                    for ($i = 1; $i <= $pages; $i++) {
-                        $index = $programsPerPage * $i;
-                        $urlString = 'http://publisher.publicideas.com/index.php?action=myprograms&type=&keyword=&nb_page=' . $programsPerPage . '&index=' . $index . '&nb_page=' . $programsPerPage;
-                        $urls = array();
-                        $urls[] = new \Oara\Curl\Request($urlString, array());
-                        $exportReport = $this->_client->get($urls);
-                        if (preg_match_all('/onclick="document.location.href=\'index.php\?action=moreallstats&progid=(.+)\';"/', $exportReport[0], $match)
-                            && preg_match_all('/<td width="100%" class="progTitreF">(.+) &laquo;<\/td>/', $exportReport[0], $match2)
-                        ) {
-                            for ($j = 0; $j < count($match[1]); $j++) {
-                                $cid = $match[1][$j];
-                                $name = $match2[1][$j];
-                                if (!isset($merchantsMap[$cid])) {
-                                    $merchant = array();
-                                    $merchant['cid'] = $cid;
-                                    $merchant['name'] = $name;
-                                    $merchants[] = $merchant;
-                                    $merchantsMap[$cid] = true;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
+        $obj = array();
+        $obj['cid'] = 1;
+        $obj['name'] = "Publicidees";
+        $merchants[] = $obj;
         return $merchants;
     }
 
@@ -202,116 +127,73 @@ class Publicidees extends \Oara\Network
     {
         $totalTransactions = array();
 
-        foreach ($this->_sites as $siteId => $siteName) {
+        $valuesFromExport = array();
+        $valuesFromExport[] = new \Oara\Curl\Parameter('action', "myresume_tout_ajax");
+        $valuesFromExport[] = new \Oara\Curl\Parameter('monthDisplay', 0);
+        $valuesFromExport[] = new \Oara\Curl\Parameter('tout', 1);
+        $valuesFromExport[] = new \Oara\Curl\Parameter('dD', $dStartDate->format("d/m/Y"));
+        $valuesFromExport[] = new \Oara\Curl\Parameter('dF', $dEndDate->format("d/m/Y"));
+        $valuesFromExport[] = new \Oara\Curl\Parameter('periode', "0");
+        $valuesFromExport[] = new \Oara\Curl\Parameter('currency', "GBP");
+        $valuesFromExport[] = new \Oara\Curl\Parameter('expAct', "1");
+        $valuesFromExport[] = new \Oara\Curl\Parameter('tabid', "0");
+        $valuesFromExport[] = new \Oara\Curl\Parameter('partid', "40113");
+        $valuesFromExport[] = new \Oara\Curl\Parameter('Submit', "Voir");
 
-            // Reconnect with the actual site
-            $valuesLogin = array(
-                new \Oara\Curl\Parameter('site', $siteId),
-                new \Oara\Curl\Parameter('page', '/index.php?'),
-            );
-            $urls = array();
-            $urls[] = new \Oara\Curl\Request('http://publisher.publicideas.com/reconnect.php', $valuesLogin);
-            $this->_client->post($urls);
-
-            $dStartDateAux = clone $dStartDate;
-            $urls = array();
-            while ($dStartDateAux <= $dEndDate) {
-
-                $valuesFromExport = array();
-                $valuesFromExport[] = new \Oara\Curl\Parameter('action', "myresume");
-                $valuesFromExport[] = new \Oara\Curl\Parameter('dD', $dStartDateAux->format("d/m/Y"));
-                $valuesFromExport[] = new \Oara\Curl\Parameter('dF', $dStartDateAux->format("d/m/Y"));
-                $valuesFromExport[] = new \Oara\Curl\Parameter('currency', "GBP");
-                $valuesFromExport[] = new \Oara\Curl\Parameter('expAct', "1");
-                $valuesFromExport[] = new \Oara\Curl\Parameter('tabid', "0");
-                $valuesFromExport[] = new \Oara\Curl\Parameter('partid', $siteId);
-                $valuesFromExport[] = new \Oara\Curl\Parameter('Submit', "Voir");
-                $urls[] = new \Oara\Curl\Request('http://publisher.publicideas.com/index.php?', $valuesFromExport);
-                $dStartDateAux->add(new \DateInterval('P1D'));
-            }
-
-            try {
-
-                $exportReportList = $this->_client->get($urls, 0 , true);
-                foreach ($exportReportList as $exportReport) {
-                    $exportData = \str_getcsv(\utf8_decode($exportReport), "\n");
-                    $num = \count($exportData);
-                    $headerArray = \str_getcsv($exportData[0], ";");
-                    $headerMap = array();
-                    if (\count($headerArray) > 1) {
-
-                        for ($j = 0; $j < \count($headerArray); $j++) {
-                            if ($headerArray[$j] == "" && $headerArray[$j - 1] == "Ventes") {
-                                $headerMap["pendingVentes"] = $j;
-                            } else if ($headerArray[$j] == "" && $headerArray[$j - 1] == "CA") {
-                                $headerMap["pendingCA"] = $j;
-                            } else {
-                                $headerMap[$headerArray[$j]] = $j;
-                            }
-                        }
-
-                        for ($j = 1; $j < $num; $j++) {
-                            $transactionExportArray = \str_getcsv($exportData[$j], ";");
-                            if (isset($headerMap["Ventes"]) && isset($headerMap["pendingVentes"])
-                                && isset($headerMap["Programme"]) && isset($headerMap["CA"]) && isset($headerMap["pendingCA"])
-                            ) {
-                                $confirmedTransactions = (int)$transactionExportArray[$headerMap["Ventes"]];
-                                $pendingTransactions = (int)$transactionExportArray[$headerMap["pendingVentes"]];
-
-                                for ($z = 0; $z < $confirmedTransactions; $z++) {
-                                    $transaction = Array();
-                                    $merchantFound = false;
-                                    foreach ($merchantList as $merchant) {
-                                        if ($merchant['name'] == $transactionExportArray[$headerMap["Programme"]]) {
-                                            $transaction['merchantId'] = $merchant['id'];
-                                            $merchantFound = true;
-                                            break;
-                                        }
-                                    }
-                                    if (!$merchantFound) {
-                                        throw new \Exception('Merchant not found');
-                                    }
-                                    $transaction['merchantId'] = 1;
-                                    $transaction['date'] = $dStartDateAux->format("Y-m-d H:i:s");
-                                    $stringAmountValue = str_replace(',', '.', $transactionExportArray[$headerMap["CA"]]);
-                                    $transaction['amount'] = \Oara\Utilities::parseDouble(floatval($stringAmountValue) / $confirmedTransactions);
-                                    $transaction['commission'] = \Oara\Utilities::parseDouble(floatval($stringAmountValue) / $confirmedTransactions);
-                                    $transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
-                                    $totalTransactions[] = $transaction;
-                                }
-
-                                for ($z = 0; $z < $pendingTransactions; $z++) {
-                                    $transaction = Array();
-                                    $merchantFound = false;
-                                    foreach ($merchantList as $merchant) {
-                                        if ($merchant['name'] == $transactionExportArray[$headerMap["Programme"]]) {
-                                            $transaction['merchantId'] = $merchant['id'];
-                                            $merchantFound = true;
-                                            break;
-                                        }
-                                    }
-                                    if (!$merchantFound) {
-                                        throw new \Exception('Merchant not found');
-                                    }
-                                    $transaction['date'] = $dStartDateAux->format("Y-m-d H:i:s");
-                                    $stringAmountValue = str_replace(',', '.', $transactionExportArray[$headerMap["pendingCA"]]);
-                                    $transaction['amount'] = \Oara\Utilities::parseDouble(floatval($stringAmountValue) / $pendingTransactions);
-                                    $transaction['commission'] = \Oara\Utilities::parseDouble(floatval($stringAmountValue) / $pendingTransactions);
-                                    $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
-                                    $totalTransactions[] = $transaction;
-                                }
-                            }
-                        }
-                    }
-                }
-            } catch (\Exception $e) {
-
-            }
-
-
+        $urls = array();
+        $urls[] = new \Oara\Curl\Request('http://publisher.publicideas.com/index.php?', $valuesFromExport);
+        try {
+            $exportReport = $this->_client->get($urls);
+        } catch (\Exception $e) {
+            return $totalTransactions;
         }
 
-    
-            return $totalTransactions;
+        $exportData = \str_getcsv(\utf8_decode($exportReport[0]), "\n");
+        $num = \count($exportData);
+        $headerArray = \str_getcsv($exportData[0], ";");
+        $headerMap = array();
+        if (\count($headerArray) > 1) {
+
+            for ($j = 0; $j < \count($headerArray); $j++) {
+                if ($headerArray[$j] == "" && $headerArray[$j - 1] == "Ventes") {
+                    $headerMap["pendingVentes"] = $j;
+                } else if ($headerArray[$j] == "" && $headerArray[$j - 1] == "CA") {
+                    $headerMap["pendingCA"] = $j;
+                } else {
+                    $headerMap[$headerArray[$j]] = $j;
+                }
+            }
+        }
+        
+        for ($j = 1; $j < $num; $j++) {
+            $transactionExportArray = \str_getcsv($exportData[$j], ";");
+            $transactionDate = new \DateTime($transactionExportArray['0']);
+            if (isset($headerMap["Ventes"]) && isset($headerMap["pendingVentes"])) {
+                $confirmedTransactions = (int)$transactionExportArray[$headerMap["Ventes"]];
+                $pendingTransactions = (int)$transactionExportArray[$headerMap["pendingVentes"]];
+
+                for ($z = 0; $z < $confirmedTransactions; $z++) {
+                    $transaction = Array();
+                    $transaction['merchantId'] = 1;
+                    $transaction['date'] = $transactionDate->format("Y-m-d H:i:s");
+                    $transaction['amount'] = \Oara\Utilities::parseDouble(\substr($transactionExportArray[$headerMap["CA"]], 0, -2) / $confirmedTransactions);
+                    $transaction['commission'] = \Oara\Utilities::parseDouble(\substr($transactionExportArray[$headerMap["CA"]], 0, -2) / $confirmedTransactions);
+                    $transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
+                    $totalTransactions[] = $transaction;
+                }
+
+                for ($z = 0; $z < $pendingTransactions; $z++) {
+                    $transaction = Array();
+                    $transaction['merchantId'] = 1;
+                    $transaction['date'] = $transactionDate->format("Y-m-d H:i:s");
+                    $transaction['amount'] = \Oara\Utilities::parseDouble($transactionExportArray[$headerMap["pendingCA"]] / $pendingTransactions);
+                    $transaction['commission'] = \Oara\Utilities::parseDouble($transactionExportArray[$headerMap["pendingCA"]] / $pendingTransactions);
+                    $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
+                    $totalTransactions[] = $transaction;
+                }
+            }
+        }
+
+        return $totalTransactions;
     }
 }

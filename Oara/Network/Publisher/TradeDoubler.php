@@ -418,14 +418,18 @@ class TradeDoubler extends \Oara\Network
         for ($i = 2; $i < $num - 1; $i++) {
 
             $transactionExportArray = \str_getcsv($exportData[$i], ",");
+
+            if (!isset($transactionExportArray[2])) {
+                throw new \Exception('Problem getting transaction\n\n');
+            }
             if (\count($this->_sitesAllowed) == 0 || \in_array($transactionExportArray[13], $this->_sitesAllowed)) {
 
 
-                if (trim($transactionExportArray[0]) && trim($transactionExportArray[4]) && (is_null($merchantList) || isset($merchantIdList[(int)$transactionExportArray[2]]))) {
+                if ($transactionExportArray[0] !== '' && isset($merchantIdList[(int)$transactionExportArray[2]])) {
 
                     $transaction = Array();
                     $transaction['merchantId'] = $transactionExportArray[2];
-                    $transactionDate = self::toDate($transactionExportArray[4]);
+                    $transactionDate = self::toDate(\substr($transactionExportArray[4], 0, -6));
                     $transaction['date'] = $transactionDate->format("Y-m-d H:i:s");
                     if ($transactionExportArray[8] != '') {
                         $transaction['unique_id'] = \substr($transactionExportArray[8], 0, 200);
@@ -472,49 +476,41 @@ class TradeDoubler extends \Oara\Network
      */
     private function formatDate($date)
     {
-
-        switch ($this->_dateFormat) {
-            case 'dd/MM/yy':
-                $dateString = $date->format('d/m/Y');
-                break;
-            case 'M/d/yy':
+        if ($this->_dateFormat == 'dd/MM/yy') {
+            $dateString = $date->format('d/m/Y');
+        } else
+            if ($this->_dateFormat == 'M/d/yy') {
                 $dateString = $date->format('n/j/y');
-                break;
-            case 'd/MM/yy':
-                $dateString = $date->format('j/m/y');
-                break;
-            case 'tt.MM.uu':
-                $dateString = $date->format('d.m.y');
-                break;
-            case 'jj-MM-aa':
-                $dateString = $date->format('d-m-y');
-                break;
-            case 'jj/MM/aa':
-                $dateString = $date->format('d/m/y');
-                break;
-            case 'dd.MM.yy':
-                $dateString = $date->format('d.m.y');
-                break;
-            case 'yy-MM-dd':
-                $dateString = $date->format('y-m-d');
-                break;
-            case 'd-M-yy':
-                $dateString = $date->format('j-n-y');
-                break;
-            case 'yyyy/MM/dd':
-                $dateString = $date->format('Y/m/d');
-                break;
-            case 'yyyy-MM-dd':
-                $dateString = $date->format('Y-m-d');
-                break;
-            case 'j/MM/aa':
-                $dateString = $date->format('j/m/y');
-                break;
-            default:
-                throw new \Exception("\n Date Format not supported " . $this->_dateFormat . "\n");
-                break;
-        }
-
+            } else
+                if ($this->_dateFormat == 'd/MM/yy') {
+                    $dateString = $date->format('j/m/y');
+                } else
+                    if ($this->_dateFormat == 'tt.MM.uu') {
+                        $dateString = $date->format('d.m.y');
+                    } else
+                        if ($this->_dateFormat == 'jj-MM-aa') {
+                            $dateString = $date->format('d-m-y');
+                        } else
+                            if ($this->_dateFormat == 'jj/MM/aa') {
+                                $dateString = $date->format('d/m/y');
+                            } else
+                                if ($this->_dateFormat == 'dd.MM.yy') {
+                                    $dateString = $date->format('d.m.y');
+                                } else
+                                    if ($this->_dateFormat == 'yy-MM-dd') {
+                                        $dateString = $date->format('y-m-d');
+                                    } else
+                                        if ($this->_dateFormat == 'd-M-yy') {
+                                            $dateString = $date->format('j-n-y');
+                                        } else
+                                            if ($this->_dateFormat == 'yyyy/MM/dd') {
+                                                $dateString = $date->format('Y/m/d');
+                                            } else
+                                                if ($this->_dateFormat == 'yyyy-MM-dd') {
+                                                    $dateString = $date->format('Y-m-d');
+                                                } else {
+                                                    throw new \Exception("\n Date Format not supported " . $this->_dateFormat . "\n");
+                                                }
         return $dateString;
     }
 
@@ -526,53 +522,41 @@ class TradeDoubler extends \Oara\Network
     private function toDate($dateString)
     {
         $transactionDate = null;
-        $dateString = \trim($dateString);
-        $dateParts = explode(' ', $dateString);
-        $dateString = $dateParts[0] . ' ' . $dateParts[1];
-        switch ($this->_dateFormat) {
-            case 'dd/MM/yy':
-                $dateString = \str_replace(".", ":", $dateString);
-                $format = "d/m/y H:i:s";
-                break;
-            case 'M/d/yy':
-                $format = "n/j/y H:i:s";
-                break;
-            case 'd/MM/yy':
-                $format = "j/m/y H:i:s";
-                break;
-            case 'tt.MM.uu':
-                $format = "d.m.y H:i:s";
-                break;
-            case 'jj-MM-aa':
-                $format = "d-m-y H:i:s";
-                break;
-            case 'jj/MM/aa':
-                $format = "d/m/y H:i:s";
-                break;
-            case 'dd.MM.yy':
-                $format = "d.m.y H:i:s";
-                break;
-            case 'yy-MM-dd':
-                $format = "y-m-d H:i:s";
-                break;
-            case 'd-M-yy':
-                $format = "j-n-y H:i:s";
-                break;
-            case 'yyyy/MM/dd':
-                $format = "Y/m/d H:i:s";
-                break;
-            case 'yyyy-MM-dd':
-                $format = "Y-m-d H:i:s";
-                break;
-            case 'j/MM/aa':
-                $format = "j/m/y H:i:s";
-                break;
-            default:
-                throw new \Exception("\n Date Format not supported " . $this->_dateFormat . "\n");
-                break;
-        }
-
-        $transactionDate = \DateTime::createFromFormat($format, $dateString);
+        if ($this->_dateFormat == 'dd/MM/yy') {
+            $transactionDate = \DateTime::createFromFormat("d/m/y H:i:s", \trim($dateString));
+        } else
+            if ($this->_dateFormat == 'M/d/yy') {
+                $transactionDate = \DateTime::createFromFormat("n/j/y H:i:s", \trim($dateString));
+            } else
+                if ($this->_dateFormat == 'd/MM/yy') {
+                    $transactionDate = \DateTime::createFromFormat("j/m/y H:i:s", \trim($dateString));
+                } else
+                    if ($this->_dateFormat == 'tt.MM.uu') {
+                        $transactionDate = \DateTime::createFromFormat("d.m.y H:i:s", \trim($dateString));
+                    } else
+                        if ($this->_dateFormat == 'jj-MM-aa') {
+                            $transactionDate = \DateTime::createFromFormat("d-m-y H:i:s", \trim($dateString));
+                        } else
+                            if ($this->_dateFormat == 'jj/MM/aa') {
+                                $transactionDate = \DateTime::createFromFormat("d/m/y H:i:s", \trim($dateString));
+                            } else
+                                if ($this->_dateFormat == 'dd.MM.yy') {
+                                    $transactionDate = \DateTime::createFromFormat("d.m.y H:i:s", \trim($dateString));
+                                } else
+                                    if ($this->_dateFormat == 'yy-MM-dd') {
+                                        $transactionDate = \DateTime::createFromFormat("y-m-d H:i:s", \trim($dateString));
+                                    } else
+                                        if ($this->_dateFormat == 'd-M-yy') {
+                                            $transactionDate = \DateTime::createFromFormat("j-n-y H:i:s", \trim($dateString));
+                                        } else
+                                            if ($this->_dateFormat == 'yyyy/MM/dd') {
+                                                $transactionDate = \DateTime::createFromFormat("Y/m/d H:i:s", \trim($dateString));
+                                            } else
+                                                if ($this->_dateFormat == 'yyyy-MM-dd') {
+                                                    $transactionDate = \DateTime::createFromFormat("Y-m-d H:i:s", \trim($dateString));
+                                                } else {
+                                                    throw new \Exception("\n Date Format not supported " . $this->_dateFormat . "\n");
+                                                }
         return $transactionDate;
     }
 

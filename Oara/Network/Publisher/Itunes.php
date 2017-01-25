@@ -39,7 +39,7 @@ class Itunes extends \Oara\Network
      */
     public function login($credentials)
     {
-        $this->_pass = $credentials['apipassword'];
+        $this->_pass = $credentials['apiPassword'];
     }
 
     /**

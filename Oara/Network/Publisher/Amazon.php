@@ -112,7 +112,7 @@ class Amazon extends \Oara\Network
         $totalTransactions = array();
         $amountDays = $dStartDate->diff($dEndDate)->days;
         $auxDate = clone $dStartDate;
-        for ($j = 0; $j <= $amountDays; $j++) {
+        for ($j = 0; $j < $amountDays; $j++) {
             $date = $auxDate->format("Ymd");
 
             $url = "https://assoc-datafeeds-eu.amazon.com/datafeed/getReport?filename={$this->_credentials["user"]}-earnings-report-$date.tsv.gz";
@@ -139,21 +139,18 @@ class Amazon extends \Oara\Network
                 $num = \count($exportData);
                 for ($i = 2; $i < $num; $i++) {
                     $transactionExportArray = \explode("\t", $exportData[$i]);
-                    if (count($transactionExportArray) > 1) {
 
-
-                        $transaction = Array();
-                        $transaction['merchantId'] = 1;
-                        $transaction['date'] = $auxDate->format("Y-m-d H:i:s");
-                        if ($transactionExportArray[9] != null) {
-                            $transaction['custom_id'] = $transactionExportArray[9];
-                        }
-
-                        $transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
-                        $transaction['amount'] = \Oara\Utilities::parseDouble($transactionExportArray[7]);
-                        $transaction['commission'] = \Oara\Utilities::parseDouble($transactionExportArray[8]);
-                        $totalTransactions[] = $transaction;
+                    $transaction = Array();
+                    $transaction['merchantId'] = 1;
+                    $transaction['date'] = $auxDate->format("Y-m-d H:i:s");
+                    if ($transactionExportArray[2] != null) {
+                        $transaction['custom_id'] = $transactionExportArray[2];
                     }
+
+                    $transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
+                    $transaction['amount'] = \Oara\Utilities::parseDouble($transactionExportArray[7]);
+                    $transaction['commission'] = \Oara\Utilities::parseDouble($transactionExportArray[8]);
+                    $totalTransactions[] = $transaction;
 
                 }
                 \unlink($filename);

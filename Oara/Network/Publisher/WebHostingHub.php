@@ -31,29 +31,6 @@ namespace Oara\Network\Publisher;
 class WebHostingHub extends PostAffiliatePro
 {
 
-
-    /**
-     * @return array
-     */
-    public function getNeededCredentials()
-    {
-        $credentials = array();
-
-        $parameter = array();
-        $parameter["description"] = "User Log in";
-        $parameter["required"] = true;
-        $parameter["name"] = "User";
-        $credentials["user"] = $parameter;
-
-        $parameter = array();
-        $parameter["description"] = "Password to Log in";
-        $parameter["required"] = true;
-        $parameter["name"] = "Password";
-        $credentials["password"] = $parameter;
-
-        return $credentials;
-    }
-    
     /**
      * @return bool
      */

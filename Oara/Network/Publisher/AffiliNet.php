@@ -65,10 +65,10 @@ class AffiliNet extends \Oara\Network
         $credentials["user"] = $parameter;
 
         $parameter = array();
-        $parameter["description"] = "API Password";
+        $parameter["description"] = "Password to Log in";
         $parameter["required"] = true;
-        $parameter["name"] = "API Password";
-        $credentials["apipassword"] = $parameter;
+        $parameter["name"] = "Password";
+        $credentials["password"] = $parameter;
 
         return $credentials;
     }
@@ -130,6 +130,7 @@ class AffiliNet extends \Oara\Network
     public function getTransactionList($merchantList = null, \DateTime $dStartDate = null, \DateTime $dEndDate = null)
     {
         $totalTransactions = array();
+
         $merchantIdList = \Oara\Utilities::getMerchantIdMapFromMerchantList($merchantList);
 
         $publisherStatisticsServiceUrl = 'https://api.affili.net/V2.0/PublisherStatistics.svc?wsdl';
@@ -166,9 +167,7 @@ class AffiliNet extends \Oara\Network
                     $transaction["unique_id"] = $transactionObject->TransactionId;
                     $transaction["commission"] = $transactionObject->PublisherCommission;
                     $transaction["amount"] = $transactionObject->NetPrice;
-                    $dateString = \explode (".", $transactionObject->RegistrationDate);
-                    $transactionDate = \DateTime::createFromFormat("Y-m-d\TH:i:s", $dateString[0]);
-                    $transaction["date"] = $transactionDate->format("Y-m-d H:i:s");
+                    $transaction["date"] = $transactionObject->RegistrationDate;
                     $transaction["merchantId"] = $transactionObject->ProgramId;
                     $transaction["custom_id"] = $transactionObject->SubId;
                     if ($transaction['status'] == 'Confirmed') {

@@ -232,7 +232,6 @@ class LinkShare extends \Oara\Network
     {
         $totalTransactions = Array();
         $merchantIdList = \Oara\Utilities::getMerchantIdMapFromMerchantList($merchantList);
-        $uniqueIdMap = array();
 
         foreach ($this->_siteList as $site) {
             if (empty($this->_sitesAllowed) || in_array($site->id, $this->_sitesAllowed)) {
@@ -245,13 +244,15 @@ class LinkShare extends \Oara\Network
                 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
                 curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
                 curl_setopt($ch, CURLOPT_TIMEOUT, 50);
-                $result = curl_exec($ch);
+                curl_exec($ch);
                 $info = curl_getinfo($ch);
                 if ($info['http_code'] != 200) {
                     return $totalTransactions;
+                } else {
+                    $result = file_get_contents($url);
                 }
                 curl_close($ch);
-
+                
                 $url = "https://ran-reporting.rakutenmarketing.com/en/reports/signature-orders-report/filters?start_date=" . $dStartDate->format("Y-m-d") . "&end_date=" . $dEndDate->format("Y-m-d") . "&include_summary=N" . "&network=" . $this->_nid . "&tz=GMT&date_type=transaction&token=" . urlencode($site->token);
                 $ch = curl_init();
                 curl_setopt($ch, CURLOPT_URL, $url);
@@ -259,10 +260,12 @@ class LinkShare extends \Oara\Network
                 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
                 curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
                 curl_setopt($ch, CURLOPT_TIMEOUT, 50);
-                $resultSignature = curl_exec($ch);
+                curl_exec($ch);
                 $info = curl_getinfo($ch);
                 if ($info['http_code'] != 200) {
                     return $totalTransactions;
+                } else {
+                    $resultSignature = file_get_contents($url);
                 }
                 curl_close($ch);
 
@@ -280,7 +283,7 @@ class LinkShare extends \Oara\Network
                 for ($j = 1; $j < $num; $j++) {
                     $transactionData = \str_getcsv($exportData [$j], ",");
 
-                    if (isset($merchantIdList[$transactionData[3]]) && count($transactionData) == 10) {
+                    if (isset($merchantIdList[$transactionData [1]]) && count($transactionData) == 11) {
                         $transaction = Array();
                         $transaction ['merchantId'] = ( int )$transactionData [3];
                         $transactionDate = \DateTime::createFromFormat("m/d/y H:i:s", $transactionData [1] . " " . $transactionData [2]);
@@ -290,24 +293,26 @@ class LinkShare extends \Oara\Network
                         if (isset($signatureMap[$transactionData [0]])) {
                             $transaction ['custom_id'] = $signatureMap[$transactionData [0]];
                         }
+                        $transaction ['unique_id'] = $transactionData [10];
 
-                        if (!isset($uniqueIdMap[$transactionData[0]])) {
-                            $uniqueIdMap[$transactionData[0]] = 1;
-                        } else {
-                            $uniqueIdMap[$transactionData[0]]++;
-                        }
-                        $transaction ['unique_id'] = $transactionData[0] . '_' . $uniqueIdMap[$transactionData[0]];
-
-                        $sales = \Oara\Utilities::parseDouble($transactionData [7]);
+                        $sales = $filter->filter($transactionData [7]);
 
                         if ($sales != 0) {
-                            $transaction ['status'] = \Oara\Utilities::STATUS_CONFIRMED;
+                            $transaction ['status'] = Oara_Utilities::STATUS_CONFIRMED;
                         } else if ($sales == 0) {
-                            $transaction ['status'] = \Oara\Utilities::STATUS_PENDING;
+                            $transaction ['status'] = Oara_Utilities::STATUS_PENDING;
                         }
 
-                        $transaction ['amount'] = $sales;
+                        $transaction ['amount'] = \Oara\Utilities::parseDouble($transactionData [7]);
+
                         $transaction ['commission'] = \Oara\Utilities::parseDouble($transactionData [9]);
+
+                        if ($transaction ['commission'] < 0) {
+                            $transaction ['amount'] = 0;
+                            $transaction ['commission'] = 0;
+                            $transaction ['status'] = Oara_Utilities::STATUS_DECLINED;
+                        }
+
                         $totalTransactions [] = $transaction;
                     }
                 }
