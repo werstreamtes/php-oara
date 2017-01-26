@@ -32,8 +32,8 @@ class TradeDoubler extends \Oara\Network
 {
 
     protected $_sitesAllowed = array();
-    private $_client = null;
-    private $_dateFormat = null;
+    protected $_client = null;
+    protected $_dateFormat = null;
 
     public function login($credentials)
     {
@@ -90,6 +90,7 @@ class TradeDoubler extends \Oara\Network
         if (\preg_match('/\(([a-zA-Z]{0,4}[\/\.-][a-zA-Z]{0,4}[\/\.-][a-zA-Z]{0,4})\)/', $exportReport[0], $match)) {
             $this->_dateFormat = $match[1];
         }
+
 
         if ($this->_dateFormat != null) {
             $connection = true;
@@ -412,6 +413,7 @@ class TradeDoubler extends \Oara\Network
         $urls = array();
         $urls[] = new \Oara\Curl\Request('http://publisher.tradedoubler.com/pan/aReport3Internal.action?', $valuesFormExport);
         $exportReport = $this->_client->get($urls);
+
         $exportReport[0] = self::checkReportError($exportReport[0], $urls[0]);
         $exportData = \str_getcsv($exportReport[0], "\r\n");
         $num = \count($exportData);
@@ -430,6 +432,7 @@ class TradeDoubler extends \Oara\Network
                     $transaction = Array();
                     $transaction['merchantId'] = $transactionExportArray[2];
                     $transactionDate = self::toDate(\substr($transactionExportArray[4], 0, -6));
+                    
                     $transaction['date'] = $transactionDate->format("Y-m-d H:i:s");
                     if ($transactionExportArray[8] != '') {
                         $transaction['unique_id'] = \substr($transactionExportArray[8], 0, 200);
@@ -474,7 +477,7 @@ class TradeDoubler extends \Oara\Network
      * @return string
      * @throws Exception
      */
-    private function formatDate($date)
+    protected function formatDate($date)
     {
         if ($this->_dateFormat == 'dd/MM/yy') {
             $dateString = $date->format('d/m/Y');
@@ -519,11 +522,17 @@ class TradeDoubler extends \Oara\Network
      * @return \DateTime|null
      * @throws Exception
      */
-    private function toDate($dateString)
+    protected function toDate($dateString)
     {
         $transactionDate = null;
+        $hour_separator=':';
+        if (strlen($dateString)>10){
+            if (strpos(substr($dateString,10),'.')!==false){
+                $hour_separator='.';
+            }
+        }
         if ($this->_dateFormat == 'dd/MM/yy') {
-            $transactionDate = \DateTime::createFromFormat("d/m/y H:i:s", \trim($dateString));
+            $transactionDate = \DateTime::createFromFormat("d/m/y H{$hour_separator}i{$hour_separator}s", \trim($dateString));
         } else
             if ($this->_dateFormat == 'M/d/yy') {
                 $transactionDate = \DateTime::createFromFormat("n/j/y H:i:s", \trim($dateString));
