@@ -31,9 +31,9 @@ namespace Oara\Network\Publisher;
 class NetAffiliation extends \Oara\Network
 {
     protected $_sitesAllowed = array();
-    private $_serverNumber = null;
-    private $_credentials = null;
-    private $_client = null;
+    protected $_serverNumber = null;
+    protected $_credentials = null;
+    protected $_client = null;
 
     /**
      * @param $credentials
@@ -48,7 +48,7 @@ class NetAffiliation extends \Oara\Network
 
         $user = $credentials['user'];
         $password = $credentials['password'];
-        $loginUrl = "https://www2.netaffiliation.com/login";
+        $loginUrl = "https://www6.netaffiliation.com/login";
 
         $valuesLogin = array(new \Oara\Curl\Parameter('login[from]', 'Accueil/index'),
             new \Oara\Curl\Parameter('login[email]', $user),
@@ -73,6 +73,7 @@ class NetAffiliation extends \Oara\Network
         @$doc->loadHTML($exportReport[0]);
         $xpath = new \DOMXPath($doc);
         $results = $xpath->query('//*[contains(concat(" ", normalize-space(@class), " "), " margeHaut5 ")]');
+
         foreach ($results as $result) {
             $this->_credentials["apiPassword"] = $result->nodeValue;
         }
