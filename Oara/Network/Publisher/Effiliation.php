@@ -31,7 +31,7 @@ namespace Oara\Network\Publisher;
 class Effiliation extends \Oara\Network
 {
 
-    private $_credentials = null;
+    protected $_credentials = null;
 
     /**
      * @param $credentials
