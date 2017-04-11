@@ -354,6 +354,10 @@ class CommissionJunction extends \Oara\Network
                             $transaction ['amount'] = \abs($transaction ['amount']);
                             $transaction ['commission'] = \abs($transaction ['commission']);
                         }
+                        $transaction ['aid'] = self::findAttribute($singleTransaction, 'aid');
+                        $transaction ['commission-id'] = self::findAttribute($singleTransaction, 'commission-id');
+                        $transaction ['order-id'] = self::findAttribute($singleTransaction, 'order-id');
+                        $transaction ['original'] = self::findAttribute($singleTransaction, 'original');
                         $totalTransactions[] = $transaction;
                     }
                 }
