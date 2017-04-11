@@ -323,7 +323,7 @@ class CommissionJunction extends \Oara\Network
                     if (isset($merchantIdList[(int)self::findAttribute($singleTransaction, 'cid')])) {
 
                         $transaction = Array();
-                        $transaction ['unique_id'] = self::findAttribute($singleTransaction, 'original-action-id');
+                        $transaction ['unique_id'] = self::findAttribute($singleTransaction, 'commission-id');//self::findAttribute($singleTransaction, 'original-action-id');
                         $transaction ['action'] = self::findAttribute($singleTransaction, 'action-type');
                         $transaction['merchantId'] = self::findAttribute($singleTransaction, 'cid');
                         $transactionDate = \DateTime::createFromFormat("Y-m-d\TH:i:s", \substr(self::findAttribute($singleTransaction, 'event-date'), 0, 19));
@@ -355,7 +355,7 @@ class CommissionJunction extends \Oara\Network
                             $transaction ['commission'] = \abs($transaction ['commission']);
                         }
                         $transaction ['aid'] = self::findAttribute($singleTransaction, 'aid');
-                        $transaction ['commission-id'] = self::findAttribute($singleTransaction, 'commission-id');
+                        //$transaction ['commission-id'] = self::findAttribute($singleTransaction, 'commission-id');
                         $transaction ['order-id'] = self::findAttribute($singleTransaction, 'order-id');
                         $transaction ['original'] = self::findAttribute($singleTransaction, 'original');
                         $totalTransactions[] = $transaction;
