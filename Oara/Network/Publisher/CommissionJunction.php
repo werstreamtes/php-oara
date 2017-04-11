@@ -46,7 +46,7 @@ class CommissionJunction extends \Oara\Network
         $password = $credentials['password'];
         $this->_apiPassword = $credentials['apipassword'];
 
-        $this->_client = new \Oara\Curl\Access($credentials);
+        /*$this->_client = new \Oara\Curl\Access($credentials);
 
         $loginUrl = 'https://members.cj.com/member/foundation/memberlogin.do?';
         $valuesLogin = array(new \Oara\Curl\Parameter('uname', $user),
@@ -57,7 +57,7 @@ class CommissionJunction extends \Oara\Network
 
         $urls = array();
         $urls[] = new \Oara\Curl\Request($loginUrl, $valuesLogin);
-        $this->_client->post($urls);
+        $this->_client->post($urls);*/
 
     }
 
@@ -74,11 +74,11 @@ class CommissionJunction extends \Oara\Network
         $parameter["name"] = "User";
         $credentials["user"] = $parameter;
 
-        $parameter = array();
+        /*$parameter = array();
         $parameter["description"] = "Password to Log in";
         $parameter["required"] = true;
         $parameter["name"] = "Password";
-        $credentials["password"] = $parameter;
+        $credentials["password"] = $parameter;*/
 
         $parameter = array();
         $parameter["description"] = "API Password ";
@@ -96,7 +96,7 @@ class CommissionJunction extends \Oara\Network
     {
         $connection = true;
 
-        $cookieMap = array();
+        /*$cookieMap = array();
         $cookieContent = $this->_client->getCookies();
         $cookieArray = \explode("\n", $cookieContent);
         for ($i = 4; $i < \count($cookieArray); $i++) {
@@ -116,10 +116,10 @@ class CommissionJunction extends \Oara\Network
             $this->_accountId = $cookieMap["jsCompanyId"];
         } else {
             return false;
-        }
+        }*/
 
         $result = self::apiCall('https://commission-detail.api.cj.com/v3/commissions?date-type=event');
-        if (\preg_match("/error/", $result)) {
+        if ($result===false || \preg_match("/error/", $result)) {
             return false;
         }
 
@@ -131,6 +131,8 @@ class CommissionJunction extends \Oara\Network
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_POST, FALSE);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
         curl_setopt($ch, CURLOPT_HTTPHEADER, array("Authorization: " . $this->_apiPassword));
         $curl_results = curl_exec($ch);
@@ -160,7 +162,7 @@ class CommissionJunction extends \Oara\Network
     private function getMerchantExport()
     {
         $merchantReportList = array();
-        $valuesFromExport = array(new \Oara\Curl\Parameter('sortKey', 'active_start_date'),
+        /*$valuesFromExport = array(new \Oara\Curl\Parameter('sortKey', 'active_start_date'),
             new \Oara\Curl\Parameter('sortOrder', 'DESC'),
             new \Oara\Curl\Parameter('contractView', 'ALL'),
             new \Oara\Curl\Parameter('contractView', 'ALL'),
@@ -186,7 +188,48 @@ class CommissionJunction extends \Oara\Network
                 $merchantExportArray = str_getcsv($exportData[$i], ",");
                 $merchantReportList[] = $merchantExportArray;
             }
-        }
+        }*/
+        $page=1;
+        $per_page=100;
+        $total_pages=1;
+        do{
+            if ($page>3){
+                exit;
+            }
+            $response = self::apiCall('https://advertiser-lookup.api.cj.com/v3/advertiser-lookup?advertiser-ids=joined&records-per-page='.$per_page.'&page-number='.$page);
+            $xml = \simplexml_load_string($response, null, LIBXML_NOERROR | LIBXML_NOWARNING);
+            if (!isset($xml->advertisers)) {
+                break;
+            }
+
+            $total_adv=(int)$xml->advertisers[0]['total-matched'];
+            $total_pages=ceil($total_adv/$per_page);
+            foreach ($xml->advertisers->advertiser as $adv){
+                $adv_id='';
+                $adv_name='';
+                foreach ($adv->children() AS $key=>$value){
+
+                    if ($key=='advertiser-id'){
+                        $adv_id=(string)$value;
+
+                    }
+                    if ($key=='advertiser-name'){
+                        $adv_name=(string)$value;
+
+                    }
+                }
+                if (trim($adv_id)!='' && trim($adv_name)!=''){
+                    $merchantReportList[]=[
+                        $adv_id,
+                        $adv_name,
+                    ] ;
+                }
+
+            }
+            $page++;
+
+        }while($total_pages>=$page);
+
 
         return $merchantReportList;
     }
@@ -206,7 +249,7 @@ class CommissionJunction extends \Oara\Network
 
         $iteration = self::calculeIterationNumber(\count($merchantIdArray), '20');
         for ($it = 0; $it < $iteration; $it++) {
-            echo "iteration $it of $iteration \n\n";
+            //echo "iteration $it of $iteration \n\n";
             $merchantSlice = \array_slice($merchantIdArray, $it * 20, 20);
             try {
 
@@ -232,7 +275,7 @@ class CommissionJunction extends \Oara\Network
                                 $done = true;
                             } catch (\Exception $e) {
                                 $try++;
-                                echo "try again $try\n\n";
+                                //echo "try again $try\n\n";
                             }
                         }
                         if ($try == 5) {
@@ -285,7 +328,7 @@ class CommissionJunction extends \Oara\Network
                         $transaction['merchantId'] = self::findAttribute($singleTransaction, 'cid');
                         $transactionDate = \DateTime::createFromFormat("Y-m-d\TH:i:s", \substr(self::findAttribute($singleTransaction, 'event-date'), 0, 19));
                         $transaction['date'] = $transactionDate->format("Y-m-d H:i:s");
-
+                        $transaction['custom_id'] = '';
                         if (self::findAttribute($singleTransaction, 'sid') != null) {
                             $transaction['custom_id'] = self::findAttribute($singleTransaction, 'sid');
                         }
