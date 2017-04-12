@@ -41,9 +41,6 @@ class CommissionJunction extends \Oara\Network
      */
     public function login($credentials)
     {
-
-        $user = $credentials['user'];
-        $password = $credentials['password'];
         $this->_apiPassword = $credentials['apipassword'];
 
         /*$this->_client = new \Oara\Curl\Access($credentials);
