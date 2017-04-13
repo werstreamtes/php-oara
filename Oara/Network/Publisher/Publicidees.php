@@ -41,8 +41,8 @@ class Publicidees extends \Oara\Network
     public function login($credentials)
     {
 
-        $user = $credentials['user'];
-        $password = $credentials['password'];
+        $this->_user = $credentials['user'];
+        $this->_password = $credentials['password'];
         $this->_client = new \Oara\Curl\Access($credentials);
 /*
         $loginUrl = 'http://es.publicideas.com/logmein.php';
