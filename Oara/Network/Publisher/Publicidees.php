@@ -136,7 +136,7 @@ class Publicidees extends \Oara\Network
             echo "pwd ".$this->_password."<br>";
             echo "url: ".('http://api.publicidees.com/subid.php5?p='.$this->_user.'&k='.$this->_password.'')."<br>";
             */
-            //$response = file_get_contents ('http://api.publicidees.com/subid.php5?p='.$this->_user.'&k='.$this->_password.'');
+            $response = file_get_contents ('http://api.publicidees.com/subid.php5?p='.$this->_user.'&k='.$this->_password.'');
 
 
             /*
@@ -153,7 +153,7 @@ class Publicidees extends \Oara\Network
                         throw new \Exception($response);
             */
             /*  XML PER TEST */
-
+/*
             $response =
                 "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
                 <partner id='51238'>
@@ -173,7 +173,7 @@ class Publicidees extends \Oara\Network
                     </program>
                 </partner>
             ";
-
+*/
             $ids = new \SimpleXMLElement($response);
 
             /*
@@ -210,7 +210,7 @@ class Publicidees extends \Oara\Network
             foreach ($ids->program as $program) {
                 foreach ($program->action as $action) {
                     $transactionStatus = $action['ActionStatus'];
-                    echo $action['ProgramComID']."<br>";
+                    //echo $action['ProgramComID']."<br>";
                     if ($transactionStatus == $transactionConfimed) {
                         $transaction = Array();
                         $transaction['merchantId'] = $program[0]['id'];
