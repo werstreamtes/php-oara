@@ -147,11 +147,11 @@ class Publicidees extends \Oara\Network
             //error messages returned by api call:
             //1) You reached the limit of 3 call(s) in the last 900 seconds (15 min). Try again later. Thank you
             //2) Wrong information on parameter : p, k
-            /*
+
                     if (strpos($response, 'reached the limit') !== false ||
                         strpos($response, 'Wrong') !== false)
                         throw new \Exception($response);
-            */
+
             /*  XML PER TEST */
 /*
             $response =
