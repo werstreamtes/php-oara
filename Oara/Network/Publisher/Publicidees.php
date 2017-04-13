@@ -32,6 +32,8 @@ namespace Oara\Network\Publisher;
 class Publicidees extends \Oara\Network
 {
     private $_client = null;
+    private $_user = null;
+    private $_password = null;
 
     /**
      * @param $credentials
@@ -42,7 +44,7 @@ class Publicidees extends \Oara\Network
         $user = $credentials['user'];
         $password = $credentials['password'];
         $this->_client = new \Oara\Curl\Access($credentials);
-
+/*
         $loginUrl = 'http://es.publicideas.com/logmein.php';
         $valuesLogin = array(new \Oara\Curl\Parameter('loginAff', $user),
             new \Oara\Curl\Parameter('passAff', $password),
@@ -62,7 +64,7 @@ class Publicidees extends \Oara\Network
         $urls = array();
         $urls[] = new \Oara\Curl\Request($loginUrl, $valuesLogin);
         $this->_client->post($urls);
-
+*/
     }
 
     /**
@@ -126,74 +128,113 @@ class Publicidees extends \Oara\Network
     public function getTransactionList($merchantList = null, \DateTime $dStartDate = null, \DateTime $dEndDate = null)
     {
         $totalTransactions = array();
-
-        $valuesFromExport = array();
-        $valuesFromExport[] = new \Oara\Curl\Parameter('action', "myresume_tout_ajax");
-        $valuesFromExport[] = new \Oara\Curl\Parameter('monthDisplay', 0);
-        $valuesFromExport[] = new \Oara\Curl\Parameter('tout', 1);
-        $valuesFromExport[] = new \Oara\Curl\Parameter('dD', $dStartDate->format("d/m/Y"));
-        $valuesFromExport[] = new \Oara\Curl\Parameter('dF', $dEndDate->format("d/m/Y"));
-        $valuesFromExport[] = new \Oara\Curl\Parameter('periode', "0");
-        $valuesFromExport[] = new \Oara\Curl\Parameter('currency', "GBP");
-        $valuesFromExport[] = new \Oara\Curl\Parameter('expAct', "1");
-        $valuesFromExport[] = new \Oara\Curl\Parameter('tabid', "0");
-        $valuesFromExport[] = new \Oara\Curl\Parameter('partid', "40113");
-        $valuesFromExport[] = new \Oara\Curl\Parameter('Submit', "Voir");
-
-        $urls = array();
-        $urls[] = new \Oara\Curl\Request('http://publisher.publicideas.com/index.php?', $valuesFromExport);
         try {
-            $exportReport = $this->_client->get($urls);
+
+            //$response = file_get_contents ('http://api.publicidees.com/subid.php5?p=51238&k=c534b0f5dcdddb5f56caa70e4ff3ec3b');
+            /*
+            echo "usr: ".$this->_user."<br>";
+            echo "pwd ".$this->_password."<br>";
+            echo "url: ".('http://api.publicidees.com/subid.php5?p='.$this->_user.'&k='.$this->_password.'')."<br>";
+            */
+            //$response = file_get_contents ('http://api.publicidees.com/subid.php5?p='.$this->_user.'&k='.$this->_password.'');
+
+
+            /*
+            echo "<br><br>RESPONSE<br><br>";
+            var_dump($response);
+            */
+
+            //error messages returned by api call:
+            //1) You reached the limit of 3 call(s) in the last 900 seconds (15 min). Try again later. Thank you
+            //2) Wrong information on parameter : p, k
+            /*
+                    if (strpos($response, 'reached the limit') !== false ||
+                        strpos($response, 'Wrong') !== false)
+                        throw new \Exception($response);
+            */
+            /*  XML PER TEST */
+
+            $response =
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+                <partner id='51238'>
+                    <program id='390'>
+                        <name>
+                            Wineandco
+                        </name>
+                        <action id=\"1826271-606458\" SubID=\"\" ActionDate=\"2017-04-12 14:32:54\" ValidationDate=\"\" ActionStatus=\"2\" ActionType=\"3\" ProgramCommission=\"10.000%\" ActionCommission=\"17.833\" CartAmount=\"178.33\" ProgramComID=\"835377\" PartnerComID=\"835018\" Title=\"Vente_NouveauClient\" ProgramCurrency=\"EUR\" Device=\"desktop\" />
+                    </program>
+                    <program id='546'>
+                        <name>
+                            <![CDATA[SexyAvenue FR]]>
+                        </name>
+                        <action id=\"24865487\" SubID=\"\" ActionDate=\"2017-04-12 16:44:10\" ValidationDate=\"\" ActionStatus=\"2\" ActionType=\"3\" ProgramCommission=\"20.000%\" ActionCommission=\"22.238\" CartAmount=\"111.19\" ProgramComID=\"73146\" PartnerComID=\"73146\" Title=\"Vente\" ProgramCurrency=\"EUR\" Device=\"desktop\" />
+                        <action id=\"24865308\" SubID=\"\" ActionDate=\"2017-04-12 13:27:26\" ValidationDate=\"\" ActionStatus=\"1\" ActionType=\"3\" ProgramCommission=\"20.000%\" ActionCommission=\"3.334\" CartAmount=\"16.67\" ProgramComID=\"73146\" PartnerComID=\"73146\" Title=\"Vente\" ProgramCurrency=\"EUR\" Device=\"mobile\" />
+                        <action id=\"24865456\" SubID=\"\" ActionDate=\"2017-04-12 15:28:46\" ValidationDate=\"\" ActionStatus=\"2\" ActionType=\"3\" ProgramCommission=\"20.000%\" ActionCommission=\"8.486\" CartAmount=\"42.43\" ProgramComID=\"73146\" PartnerComID=\"73146\" Title=\"Vente\" ProgramCurrency=\"EUR\" Device=\"desktop\" />
+                    </program>
+                </partner>
+            ";
+
+            $ids = new \SimpleXMLElement($response);
+
+            /*
+                    foreach ($ids->program as $program) {
+                        //echo var_dump($program);
+                        echo "<br><br>";
+                        echo "program id: ".($program[0]['id']);
+                        echo "<br><br>";
+                        echo "program name: ".($program->name);
+                        echo "<br><br>";
+                        echo "actions array: <br><br>";
+                        //var_dump($program->action);
+                        foreach ($program->action as $action) {
+                            echo "id: ".$action['id']."<br>";
+                            echo "SubID: ".$action['SubID']."<br>";
+                            echo "id: ".$action['ActionDate']."<br>";
+                            echo "ActionStatus: ".$action['ActionStatus']."<br>";
+                            echo "ActionType: ".$action['ActionType']."<br>";
+                            echo "ProgramCommission: ".$action['ProgramCommission']."<br>";
+                            echo "ActionCommission: ".$action['ActionCommission']."<br>";
+                            echo "CartAmount: ".$action['CartAmount']."<br>";
+                            echo "ProgramComID: ".$action['ProgramComID']."<br>";
+                            echo "PartnerComID: ".$action['PartnerComID']."<br>";
+                            echo "Title: ".$action['Title']."<br>";
+                            echo "ProgramCurrency: ".$action['ProgramCurrency']."<br>";
+                            echo "Device: ".$action['Device']."<br>";
+                            echo "----------------NEXT ACTION---------------------<br>";
+                        }
+                        echo "<br><br><br><br><br><br><br><br>";
+                    }
+            */
+            $transactionConfimed = 2;
+
+            foreach ($ids->program as $program) {
+                foreach ($program->action as $action) {
+                    $transactionStatus = $action['ActionStatus'];
+                    echo $action['ProgramComID']."<br>";
+                    if ($transactionStatus == $transactionConfimed) {
+                        $transaction = Array();
+                        $transaction['merchantId'] = $program[0]['id'];
+                        $transaction['unique_ID'] = $action['ProgramComID'];
+                        $transaction['date'] = $action['ActionDate'];
+                        $transaction['amount'] = $action['CartAmount'];
+                        $transaction['commission'] = $action['ProgramCommission'];
+                        $transaction['title'] = $action['Title'];
+                        $transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
+                        $transaction['approved'] = true;
+                        $transaction['currency'] = $action['ProgramCurrency'];
+                        $transaction['custom_id'] = $action['PartnerComID'];
+                        $totalTransactions[] = $transaction;
+                    }
+                }
+            }
+
+
         } catch (\Exception $e) {
-            return $totalTransactions;
+            throw new \Exception($e->getMessage());
         }
 
-        $exportData = \str_getcsv(\utf8_decode($exportReport[0]), "\n");
-        $num = \count($exportData);
-        $headerArray = \str_getcsv($exportData[0], ";");
-        $headerMap = array();
-        if (\count($headerArray) > 1) {
-
-            for ($j = 0; $j < \count($headerArray); $j++) {
-                if ($headerArray[$j] == "" && $headerArray[$j - 1] == "Ventes") {
-                    $headerMap["pendingVentes"] = $j;
-                } else if ($headerArray[$j] == "" && $headerArray[$j - 1] == "CA") {
-                    $headerMap["pendingCA"] = $j;
-                } else {
-                    $headerMap[$headerArray[$j]] = $j;
-                }
-            }
-        }
-        
-        for ($j = 1; $j < $num; $j++) {
-            $transactionExportArray = \str_getcsv($exportData[$j], ";");
-            $transactionDate = new \DateTime($transactionExportArray['0']);
-            if (isset($headerMap["Ventes"]) && isset($headerMap["pendingVentes"])) {
-                $confirmedTransactions = (int)$transactionExportArray[$headerMap["Ventes"]];
-                $pendingTransactions = (int)$transactionExportArray[$headerMap["pendingVentes"]];
-
-                for ($z = 0; $z < $confirmedTransactions; $z++) {
-                    $transaction = Array();
-                    $transaction['merchantId'] = 1;
-                    $transaction['date'] = $transactionDate->format("Y-m-d H:i:s");
-                    $transaction['amount'] = \Oara\Utilities::parseDouble(\substr($transactionExportArray[$headerMap["CA"]], 0, -2) / $confirmedTransactions);
-                    $transaction['commission'] = \Oara\Utilities::parseDouble(\substr($transactionExportArray[$headerMap["CA"]], 0, -2) / $confirmedTransactions);
-                    $transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
-                    $totalTransactions[] = $transaction;
-                }
-
-                for ($z = 0; $z < $pendingTransactions; $z++) {
-                    $transaction = Array();
-                    $transaction['merchantId'] = 1;
-                    $transaction['date'] = $transactionDate->format("Y-m-d H:i:s");
-                    $transaction['amount'] = \Oara\Utilities::parseDouble($transactionExportArray[$headerMap["pendingCA"]] / $pendingTransactions);
-                    $transaction['commission'] = \Oara\Utilities::parseDouble($transactionExportArray[$headerMap["pendingCA"]] / $pendingTransactions);
-                    $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
-                    $totalTransactions[] = $transaction;
-                }
-            }
-        }
-
+        //var_dump($totalTransactions);
         return $totalTransactions;
+
     }
 }
