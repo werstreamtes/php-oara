@@ -39,7 +39,7 @@ class AffiliateWindow extends \Oara\Network
     private $_currency = null;
     private $_userId = null;
     public $_sitesAllowed = array();
-
+    public $_credentials = array();
     /**
      * @param $credentials
      * @throws \Exception
@@ -48,11 +48,14 @@ class AffiliateWindow extends \Oara\Network
     public function login($credentials)
     {
         ini_set('default_socket_timeout', '120');
+
+        $this->_credentials = $credentials;
+
         $user = $credentials['user'];
         $password = $credentials['apipassword'];
         $passwordExport = $credentials['password'];
         $this->_currency = $credentials['currency'];
-
+/*
         //Login to the website
         if (filter_var($user, \FILTER_VALIDATE_EMAIL)) {
 
@@ -123,7 +126,7 @@ class AffiliateWindow extends \Oara\Network
         $soapHeader1 = new \SoapHeader($nameSpace, 'UserAuthentication', array('iId' => $this->_userId, 'sPassword' => $password, 'sType' => 'affiliate'), true, $nameSpace);
         $soapHeader2 = new \SoapHeader($nameSpace, 'getQuota', true, true, $nameSpace);
         $this->_apiClient->__setSoapHeaders(array($soapHeader1, $soapHeader2));
-
+*/
     }
 
     /**
@@ -210,63 +213,25 @@ class AffiliateWindow extends \Oara\Network
     {
         $totalTransactions = array();
 
-        $dStartDate = clone $dStartDate;
-        $dStartDate->setTime(0, 0, 0);
-        $dEndDate = clone $dEndDate;
-        $dEndDate->setTime(23, 59, 59);
+        try {
+            $id = $this->_credentials["accountid"];
+            $pwd = $this->_credentials["apipassword"];
+            //echo "<br> id ".$id." pwd ".$pwd."<br>";
 
-        $params = array();
-        $params['sDateType'] = 'transaction';
-        if ($merchantList != null) {
-            $merchantIdList = \Oara\Utilities::getMerchantIdMapFromMerchantList($merchantList);
-            $params['aMerchantIds'] =  \array_keys($merchantIdList);
-        }
-        if ($dStartDate != null) {
-            $params['dStartDate'] = $dStartDate->format("Y-m-d\TH:i:s");
-        }
-        if ($dEndDate != null) {
-            $params['dEndDate'] = $dEndDate->format("Y-m-d\TH:i:s");
-        }
-
-        $params['iOffset'] = null;
-
-        $params['iLimit'] = $this->_pageSize;
-        $transactionList = $this->_apiClient->getTransactionList($params);
-        if (\sizeof($transactionList->getTransactionListReturn) > 0) {
-            $iteration = self::getIterationNumber($transactionList->getTransactionListCountReturn->iRowsAvailable, $this->_pageSize);
-            unset($transactionList);
-            for ($j = 0; $j < $iteration; $j++) {
-                $params['iOffset'] = $this->_pageSize * $j;
-                $transactionList = $this->_apiClient->getTransactionList($params);
-
-                foreach ($transactionList->getTransactionListReturn as $transactionObject) {
-                    $transaction = Array();
-                    $transaction['unique_id'] = $transactionObject->iId;
-                    $transaction['merchantId'] = $transactionObject->iMerchantId;
-                    $date = new \DateTime($transactionObject->dTransactionDate);
-                    $transaction['date'] = $date->format("Y-m-d H:i:s");
-
-                    if (isset($transactionObject->sClickref) && $transactionObject->sClickref != null) {
-                        $transaction['custom_id'] = $transactionObject->sClickref;
-                    }
-                    $transaction['type'] = $transactionObject->sType;
-                    $transaction['status'] = $transactionObject->sStatus;
-                    $transaction['amount'] = $transactionObject->mSaleAmount->dAmount;
-                    $transaction['commission'] = $transactionObject->mCommissionAmount->dAmount;
-
-                    if (isset($transactionObject->aTransactionParts)) {
-                        $transactionPart = \current($transactionObject->aTransactionParts);
-                        if ($transactionPart->mCommissionAmount->sCurrency != $this->_currency) {
-                            $transaction['currency'] = $transactionPart->mCommissionAmount->sCurrency;
-                        }
-                    }
-                    $totalTransactions[] = $transaction;
-                }
-
-                unset($transactionList);
-                \gc_collect_cycles();
-            }
-
+            $dStartDate_ = $dStartDate->format("Y-m-d");
+            //echo "<br>s date ".$dStartDate_;
+            $dStartTime_ = $dStartDate->format("H:s:i");
+            $dEndDate_ = $dEndDate->format("Y-m-d");
+            $dEndTime_ = $dEndDate->format("H:s:i");
+            $dEndDate = urlencode($dEndDate_ . "T" . $dEndTime_);
+            $dStartDate = urlencode($dStartDate_ . "T" . $dStartTime_);
+            echo "<br>start date " . $dStartDate;
+            //$url = 'https://api.awin.com/publishers/'.$id.'/transactions/?accessToken='.$pwd.'&startDate=2017-02-20T00%3A00%3A00&endDate=2017-02-21T01%3A59%3A59&timezone=Europe/Berlin';
+            $url = 'https://api.awin.com/publishers/' . $id . '/transactions/?accessToken=' . $pwd . '&startDate=' . $dStartDate . '&endDate=' . $dEndDate . '&timezone=Europe/Berlin';
+            $content = \utf8_encode(\file_get_contents($url));
+            $totalTransactions = \json_decode($content);
+        } catch (\Exception $e) {
+            throw new Exception($e);
         }
         return $totalTransactions;
     }
