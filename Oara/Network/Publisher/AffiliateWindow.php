@@ -170,11 +170,11 @@ class AffiliateWindow extends \Oara\Network
     {
         $connection = false;
         try {
-
+/*
             $params = Array();
             $params['sRelationship'] = 'joined';
             $this->_apiClient->getMerchantList($params);
-
+*/
             $connection = true;
         } catch (\Exception $e) {
 
@@ -225,7 +225,7 @@ class AffiliateWindow extends \Oara\Network
             $dEndTime_ = $dEndDate->format("H:s:i");
             $dEndDate = urlencode($dEndDate_ . "T" . $dEndTime_);
             $dStartDate = urlencode($dStartDate_ . "T" . $dStartTime_);
-            echo "<br>start date " . $dStartDate;
+            //echo "<br>start date " . $dStartDate;
             //$url = 'https://api.awin.com/publishers/'.$id.'/transactions/?accessToken='.$pwd.'&startDate=2017-02-20T00%3A00%3A00&endDate=2017-02-21T01%3A59%3A59&timezone=Europe/Berlin';
             $url = 'https://api.awin.com/publishers/' . $id . '/transactions/?accessToken=' . $pwd . '&startDate=' . $dStartDate . '&endDate=' . $dEndDate . '&timezone=Europe/Berlin';
             $content = \utf8_encode(\file_get_contents($url));
