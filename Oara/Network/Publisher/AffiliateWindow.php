@@ -223,13 +223,13 @@ class AffiliateWindow extends \Oara\Network
             $result = \file_get_contents($url);
             if ($result === false)
             {
-                throw new Exception("php-oara AffiliateWindow - file_get_contents is false");
+                throw new \Exception("php-oara AffiliateWindow - file_get_contents is false");
             } else {
                 $content = \utf8_encode($result);
                 $totalTransactions = \json_decode($content);
             }
         } catch (\Exception $e) {
-            throw new Exception($e);
+            throw new \Exception($e);
         }
         return $totalTransactions;
     }
