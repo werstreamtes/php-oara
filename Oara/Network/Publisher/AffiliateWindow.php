@@ -51,82 +51,83 @@ class AffiliateWindow extends \Oara\Network
 
         $this->_credentials = $credentials;
 
-        $user = $credentials['user'];
+        $this->_userId = $credentials['accountid'];
         $password = $credentials['apipassword'];
-        $passwordExport = $credentials['password'];
+        /*
         $this->_currency = $credentials['currency'];
-/*
-        //Login to the website
-        if (filter_var($user, \FILTER_VALIDATE_EMAIL)) {
 
-            $this->_exportClient = new \Oara\Curl\Access($credentials);
-            //Log in
-            $valuesLogin = array(
-                new \Oara\Curl\Parameter('email', $user),
-                new \Oara\Curl\Parameter('password', $passwordExport),
-                new \Oara\Curl\Parameter('Login', '')
-            );
-            $urls = array();
-            $urls[] = new \Oara\Curl\Request('https://darwin.affiliatewindow.com/login?', $valuesLogin);
-            $this->_exportClient->post($urls);
+                //Login to the website
+                if (filter_var($user, \FILTER_VALIDATE_EMAIL)) {
 
-
-            $urls = array();
-            $urls[] = new \Oara\Curl\Request('https://darwin.affiliatewindow.com/user/', array());
-            $exportReport = $this->_exportClient->get($urls);
-            if (\preg_match_all('/href=\"\/awin\/affiliate\/.*\".*id=\"goDarwin(.*)\"/', $exportReport[0], $matches)) {
-
-                foreach ($matches[1] as $user) {
+                    $this->_exportClient = new \Oara\Curl\Access($credentials);
+                    //Log in
+                    $valuesLogin = array(
+                        new \Oara\Curl\Parameter('email', $user),
+                        new \Oara\Curl\Parameter('password', $passwordExport),
+                        new \Oara\Curl\Parameter('Login', '')
+                    );
                     $urls = array();
-                    $urls[] = new \Oara\Curl\Request('https://darwin.affiliatewindow.com/awin/affiliate/' . $user, array());
+                    $urls[] = new \Oara\Curl\Request('https://darwin.affiliatewindow.com/login?', $valuesLogin);
+                    $this->_exportClient->post($urls);
+
+
+                    $urls = array();
+                    $urls[] = new \Oara\Curl\Request('https://darwin.affiliatewindow.com/user/', array());
                     $exportReport = $this->_exportClient->get($urls);
+                    if (\preg_match_all('/href=\"\/awin\/affiliate\/.*\".*id=\"goDarwin(.*)\"/', $exportReport[0], $matches)) {
 
-                    $doc = new \DOMDocument();
-                    @$doc->loadHTML($exportReport[0]);
-                    $xpath = new \DOMXPath($doc);
-                    $linkList = $xpath->query('//a');
-                    $href = null;
-                    foreach ($linkList as $link) {
-                        $text = \trim($link->nodeValue);
-                        if ($text == "Manage API Credentials") {
-                            $href = $link->attributes->getNamedItem("href")->nodeValue;
-                            break;
-                        }
-                    }
-                    if ($href != null) {
-                        $urls = array();
-                        $urls[] = new \Oara\Curl\Request('https://darwin.affiliatewindow.com' . $href, array());
-                        $exportReport = $this->_exportClient->get($urls);
+                        foreach ($matches[1] as $user) {
+                            $urls = array();
+                            $urls[] = new \Oara\Curl\Request('https://darwin.affiliatewindow.com/awin/affiliate/' . $user, array());
+                            $exportReport = $this->_exportClient->get($urls);
 
-                        $doc = new \DOMDocument();
-                        @$doc->loadHTML($exportReport[0]);
-                        $xpath = new \DOMXPath($doc);
-                        $linkList = $xpath->query("//span[@id='aw_api_password_hash']");
-                        foreach ($linkList as $link) {
-                            $text = \trim($link->nodeValue);
-                            if ($text == $password) {
-                                $this->_userId = $user;
-                                break;
+                            $doc = new \DOMDocument();
+                            @$doc->loadHTML($exportReport[0]);
+                            $xpath = new \DOMXPath($doc);
+                            $linkList = $xpath->query('//a');
+                            $href = null;
+                            foreach ($linkList as $link) {
+                                $text = \trim($link->nodeValue);
+                                if ($text == "Manage API Credentials") {
+                                    $href = $link->attributes->getNamedItem("href")->nodeValue;
+                                    break;
+                                }
+                            }
+                            if ($href != null) {
+                                $urls = array();
+                                $urls[] = new \Oara\Curl\Request('https://darwin.affiliatewindow.com' . $href, array());
+                                $exportReport = $this->_exportClient->get($urls);
+
+                                $doc = new \DOMDocument();
+                                @$doc->loadHTML($exportReport[0]);
+                                $xpath = new \DOMXPath($doc);
+                                $linkList = $xpath->query("//span[@id='aw_api_password_hash']");
+                                foreach ($linkList as $link) {
+                                    $text = \trim($link->nodeValue);
+                                    if ($text == $password) {
+                                        $this->_userId = $user;
+                                        break;
+                                    }
+                                }
+
+                            } else {
+                                throw new \Exception("It couldn't connect to darwin");
                             }
                         }
-
-                    } else {
-                        throw new \Exception("It couldn't connect to darwin");
                     }
+                } else {
+                    throw new \Exception("It's not an email");
                 }
-            }
-        } else {
-            throw new \Exception("It's not an email");
-        }
 
+
+        */
         $nameSpace = 'http://api.affiliatewindow.com/';
-        $wsdlUrl = 'http://api.affiliatewindow.com/v4/AffiliateService?wsdl';
+        $wsdlUrl = 'http://api.affiliatewindow.com/v6/AffiliateService?wsdl';
         //Setting the client.
         $this->_apiClient = new \SoapClient($wsdlUrl, array('login' => $this->_userId, 'encoding' => 'UTF-8', 'password' => $password, 'compression' => SOAP_COMPRESSION_ACCEPT | SOAP_COMPRESSION_GZIP | SOAP_COMPRESSION_DEFLATE, 'soap_version' => SOAP_1_1));
         $soapHeader1 = new \SoapHeader($nameSpace, 'UserAuthentication', array('iId' => $this->_userId, 'sPassword' => $password, 'sType' => 'affiliate'), true, $nameSpace);
         $soapHeader2 = new \SoapHeader($nameSpace, 'getQuota', true, true, $nameSpace);
         $this->_apiClient->__setSoapHeaders(array($soapHeader1, $soapHeader2));
-*/
     }
 
     /**
@@ -168,17 +169,8 @@ class AffiliateWindow extends \Oara\Network
      */
     public function checkConnection()
     {
-        $connection = false;
-        try {
-/*
-            $params = Array();
-            $params['sRelationship'] = 'joined';
-            $this->_apiClient->getMerchantList($params);
-*/
-            $connection = true;
-        } catch (\Exception $e) {
+        $connection = true;
 
-        }
         return $connection;
     }
 
