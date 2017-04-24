@@ -220,8 +220,14 @@ class AffiliateWindow extends \Oara\Network
             //echo "<br>start date " . $dStartDate;
             //$url = 'https://api.awin.com/publishers/'.$id.'/transactions/?accessToken='.$pwd.'&startDate=2017-02-20T00%3A00%3A00&endDate=2017-02-21T01%3A59%3A59&timezone=Europe/Berlin';
             $url = 'https://api.awin.com/publishers/' . $id . '/transactions/?accessToken=' . $pwd . '&startDate=' . $dStartDate . '&endDate=' . $dEndDate . '&timezone=Europe/Berlin';
-            $content = \utf8_encode(\file_get_contents($url));
-            $totalTransactions = \json_decode($content);
+            $result = \file_get_contents($url);
+            if ($result === false)
+            {
+                throw new Exception("php-oara AffiliateWindow - file_get_contents is false");
+            } else {
+                $content = \utf8_encode($result);
+                $totalTransactions = \json_decode($content);
+            }
         } catch (\Exception $e) {
             throw new Exception($e);
         }
