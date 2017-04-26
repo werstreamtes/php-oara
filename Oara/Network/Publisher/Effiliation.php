@@ -117,7 +117,7 @@ class Effiliation extends \Oara\Network
                 $transaction['merchantId'] = $merchantId;
                 $transaction['date'] = $transactionExportArray[10];
                 $transaction['unique_id'] = $transactionExportArray[0];
-                $transaction['status'] = $transactionExportArray[9];
+                $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
                 if ($transactionExportArray[15] != null) {
                     $transaction['custom_id'] = $transactionExportArray[15];
                 }
@@ -136,6 +136,7 @@ class Effiliation extends \Oara\Network
                 $totalTransactions[] = $transaction;
             }
         }
+
         return $totalTransactions;
     }
 
