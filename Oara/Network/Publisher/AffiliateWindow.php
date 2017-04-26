@@ -226,17 +226,18 @@ class AffiliateWindow extends \Oara\Network
             //$url = 'https://api.awin.com/publishers/'.$id.'/transactions/?accessToken='.$pwd.'&startDate=2017-02-20T00%3A00%3A00&endDate=2017-02-21T01%3A59%3A59&timezone=Europe/Berlin';
             $url = 'https://api.awin.com/publishers/' . $id . '/transactions/?accessToken=' . $pwd . '&startDate=' . $dStartDate . '&endDate=' . $dEndDate . '&timezone=Europe/Berlin';
             $result = \file_get_contents($url);
+            //var_dump($result);
             if ($result === false)
             {
-                echo "oara step2<br> ";
+                //echo "oara step2<br> ";
                 throw new \Exception("php-oara AffiliateWindow - file_get_contents is false");
             } else {
-                echo "oara step3<br> ";
+                //echo "oara step3<br> ";
                 $content = \utf8_encode($result);
                 $totalTransactions = \json_decode($content);
             }
         } catch (\Exception $e) {
-            echo "oara step5 :".$e->getMessage()."<br> ";
+            echo "oara step5 :".$e->getMessage()."\n ";
             throw new \Exception($e);
         }
         return $totalTransactions;
