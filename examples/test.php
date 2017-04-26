@@ -7,17 +7,17 @@ $credentials = array();
 $credentials["user"] = "";
 $credentials["password"] = "";
 $credentials['accountid'] = "307791";
-$credentials['apipassword'] = "9ae553d5-8ac0-49e3-9924-0ed77f35d671";
+$credentials['apipassword'] = "a694ed6107881168729d20495759467d3179d85c65f5424ea694ed6107881168729d20495759467d3179d85c65f5424e";
 $credentials['currency'] = null;
 
 $network->login($credentials);
 if ($network->checkConnection()){
     //$network->getPaymentHistory();
-    $merchantList = array();//$network->getMerchantList();
-    $startDate = new \DateTime('2017-04-22');
+    $merchantList = $network->getMerchantList();
+    $startDate = new \DateTime('2017-04-21');
     $endDate = new \DateTime('2017-04-24');
     $transactionList = $network->getTransactionList($merchantList, $startDate, $endDate);
-    var_dump($transactionList);
+    //var_dump($transactionList);
 } else {
     echo "Network credentials not valid \n";
 }

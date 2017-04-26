@@ -47,7 +47,6 @@ class AffiliateWindow extends \Oara\Network
      */
     public function login($credentials)
     {
-        echo "step0";
         ini_set('default_socket_timeout', '120');
 
         $this->_credentials = $credentials;
@@ -122,6 +121,7 @@ class AffiliateWindow extends \Oara\Network
 
 
         */
+        //echo  $this->_userId." pwd ".$password;
         $nameSpace = 'http://api.affiliatewindow.com/';
         $wsdlUrl = 'http://api.affiliatewindow.com/v6/AffiliateService?wsdl';
         //Setting the client.
@@ -129,7 +129,7 @@ class AffiliateWindow extends \Oara\Network
         $soapHeader1 = new \SoapHeader($nameSpace, 'UserAuthentication', array('iId' => $this->_userId, 'sPassword' => $password, 'sType' => 'affiliate'), true, $nameSpace);
         $soapHeader2 = new \SoapHeader($nameSpace, 'getQuota', true, true, $nameSpace);
         $this->_apiClient->__setSoapHeaders(array($soapHeader1, $soapHeader2));
-        echo "step0b";
+
     }
 
     /**
@@ -182,8 +182,8 @@ class AffiliateWindow extends \Oara\Network
     public function getMerchantList()
     {
         $merchantList = array();
-        echo "step getMerchantList";
-        /*
+        //echo "step getMerchantList";
+/*
         $params = array();
         $params['sRelationship'] = 'joined';
         $merchants = $this->_apiClient->getMerchantList($params)->getMerchantListReturn;
@@ -196,7 +196,7 @@ class AffiliateWindow extends \Oara\Network
                 $merchantList[] = $merchantArray;
             }
         }
-        */
+*/
         return $merchantList;
     }
 
@@ -211,7 +211,6 @@ class AffiliateWindow extends \Oara\Network
         $totalTransactions = array();
 
         try {
-            echo "step1";
             $id = $this->_credentials["accountid"];
             $pwd = $this->_credentials["apipassword"];
             //echo "<br> id ".$id." pwd ".$pwd."<br>";
@@ -229,15 +228,15 @@ class AffiliateWindow extends \Oara\Network
             $result = \file_get_contents($url);
             if ($result === false)
             {
-                echo "step2";
+                echo "oara step2<br> ";
                 throw new \Exception("php-oara AffiliateWindow - file_get_contents is false");
             } else {
-                echo "step3";
+                echo "oara step3<br> ";
                 $content = \utf8_encode($result);
                 $totalTransactions = \json_decode($content);
             }
-            echo "step4";
         } catch (\Exception $e) {
+            echo "oara step5 :".$e->getMessage()."<br> ";
             throw new \Exception($e);
         }
         return $totalTransactions;
