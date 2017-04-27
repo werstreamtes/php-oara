@@ -94,14 +94,15 @@ class Publicidees extends \Oara\Network
      */
     public function checkConnection()
     {
-        $connection = false;
-
+        $connection = true;
+/*
         $urls = array();
         $urls[] = new \Oara\Curl\Request('http://publisher.publicideas.com/', array());
         $exportReport = $this->_client->get($urls);
         if (\preg_match('/deconnexion\.php/', $exportReport[0], $matches)) {
             $connection = true;
         }
+        */
         return $connection;
     }
 
@@ -120,6 +121,15 @@ class Publicidees extends \Oara\Network
     }
 
     /**
+     *
+     * ActionStatus = Status of Action
+     * 0 = action refused
+     * 1 = action pending
+     * 2 = action approved
+     * ActionType = Type of action
+     * 3 = sales-based remuneratio
+     * 4 = form-based remuneration
+     *
      * @param null $merchantList
      * @param \DateTime|null $dStartDate
      * @param \DateTime|null $dEndDate
@@ -131,26 +141,26 @@ class Publicidees extends \Oara\Network
         try {
 
             //$response = file_get_contents ('http://api.publicidees.com/subid.php5?p=51238&k=c534b0f5dcdddb5f56caa70e4ff3ec3b');
-            /*
+/*
             echo "usr: ".$this->_user."<br>";
             echo "pwd ".$this->_password."<br>";
             echo "url: ".('http://api.publicidees.com/subid.php5?p='.$this->_user.'&k='.$this->_password.'')."<br>";
-            */
+*/
             $response = file_get_contents ('http://api.publicidees.com/subid.php5?p='.$this->_user.'&k='.$this->_password.'');
 
 
-            /*
-            echo "<br><br>RESPONSE<br><br>";
-            var_dump($response);
-            */
+
+            //echo "<br><br>RESPONSE<br><br>";
+            //var_dump($response);
+
 
             //error messages returned by api call:
             //1) You reached the limit of 3 call(s) in the last 900 seconds (15 min). Try again later. Thank you
             //2) Wrong information on parameter : p, k
 
-                    if (strpos($response, 'reached the limit') !== false ||
-                        strpos($response, 'Wrong') !== false)
-                        throw new \Exception($response);
+            if (strpos($response, 'reached the limit') !== false ||
+                strpos($response, 'Wrong') !== false)
+                throw new \Exception($response);
 
             /*  XML PER TEST */
 /*
@@ -205,26 +215,32 @@ class Publicidees extends \Oara\Network
                         echo "<br><br><br><br><br><br><br><br>";
                     }
             */
-            $transactionConfimed = 2;
 
             foreach ($ids->program as $program) {
                 foreach ($program->action as $action) {
-                    $transactionStatus = $action['ActionStatus'];
                     //echo $action['ProgramComID']."<br>";
-                    if ($transactionStatus == $transactionConfimed) {
-                        $transaction = Array();
-                        $transaction['merchantId'] = $program[0]['id'];
-                        $transaction['unique_ID'] = $action['ProgramComID'];
-                        $transaction['date'] = $action['ActionDate'];
-                        $transaction['amount'] = $action['CartAmount'];
-                        $transaction['commission'] = $action['ProgramCommission'];
-                        $transaction['title'] = $action['Title'];
+                    //var_dump($action);
+                    $transaction = Array();
+                    $transaction['merchantId'] = $program[0]['id'];
+                    $transaction['unique_ID'] = $action['ProgramComID'];
+                    $transaction['date'] = $action['ActionDate'];
+                    $transaction['amount'] = $action['CartAmount'];
+                    $transaction['commission'] = $action['ProgramCommission'];
+                    $transaction['title'] = $action['Title'];
+                    $transaction['currency'] = $action['ProgramCurrency'];
+                    $transaction['custom_id'] = $action['SubID'];
+                    $transaction['status'] = null;
+                    $transaction['approved'] = false;
+                    if ($action['ActionStatus'] == 0) {
+                        $transaction['status'] = \Oara\Utilities::STATUS_DECLINED;
+                    } else if  ($action['ActionStatus'] == 1) {
+                        $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
+                    } else  if ($action['ActionStatus'] == 2) {
                         $transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
                         $transaction['approved'] = true;
-                        $transaction['currency'] = $action['ProgramCurrency'];
-                        $transaction['custom_id'] = $action['PartnerComID'];
-                        $totalTransactions[] = $transaction;
                     }
+
+                    $totalTransactions[] = $transaction;
                 }
             }
 
