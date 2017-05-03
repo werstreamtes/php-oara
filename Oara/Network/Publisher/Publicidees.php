@@ -222,7 +222,7 @@ class Publicidees extends \Oara\Network
                     //var_dump($action);
                     $transaction = Array();
                     $transaction['merchantId'] = $program[0]['id'];
-                    $transaction['unique_ID'] = $action['ProgramComID'];
+                    $transaction['unique_id'] = $action['ProgramComID'];
                     $transaction['date'] = $action['ActionDate'];
                     $transaction['amount'] = $action['CartAmount'];
                     $transaction['commission'] = $action['ProgramCommission'];
@@ -231,6 +231,7 @@ class Publicidees extends \Oara\Network
                     $transaction['custom_id'] = $action['SubID'];
                     $transaction['status'] = null;
                     $transaction['approved'] = false;
+                    $transaction['status'] = null;
                     if ($action['ActionStatus'] == 0) {
                         $transaction['status'] = \Oara\Utilities::STATUS_DECLINED;
                     } else if  ($action['ActionStatus'] == 1) {
