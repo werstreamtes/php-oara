@@ -215,11 +215,15 @@ class Publicidees extends \Oara\Network
                         echo "<br><br><br><br><br><br><br><br>";
                     }
             */
-
+            $i=0;
             foreach ($ids->program as $program) {
                 foreach ($program->action as $action) {
                     //echo $action['ProgramComID']."<br>";
                     //var_dump($action);
+                    $i++;
+                    if ($i<6)
+                        echo "action[ActionDate]: ".$action['ActionDate']."<br>";
+
                     $transaction = Array();
                     $transaction['merchantId'] = $program[0]['id'];
                     $transaction['unique_id'] = $action['ProgramComID'];
