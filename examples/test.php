@@ -6,8 +6,8 @@ $credentialsNeeded = $network->getNeededCredentials();
 $credentials = array();
 $credentials["user"] = "";
 $credentials["password"] = "";
-$credentials['accountid'] = "307791";
-$credentials['apipassword'] = "a694ed6107881168729d20495759467d3179d85c65f5424ea694ed6107881168729d20495759467d3179d85c65f5424e";
+$credentials['accountid'] = "";
+$credentials['apipassword'] = "";
 $credentials['currency'] = null;
 
 $network->login($credentials);

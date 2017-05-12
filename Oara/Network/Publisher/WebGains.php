@@ -41,6 +41,17 @@ class WebGains extends \Oara\Network
      */
     public function login($credentials)
     {
+        define('USERNAME', 'bravogutschein');
+
+        define('PASSWORD', 'WeBravoWG');
+
+        define('USER_AGENT', 'Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.2309.372 Safari/537.36');
+
+        define('COOKIE_FILE', 'cookie.txt');
+
+        define('LOGIN_ACTION_URL', 'https://www.webgains.de/loginform.html?action=login');
+
+
         $this->_user = $credentials['user'];
         $this->_password = $credentials['password'];
         $this->_client = new \Oara\Curl\Access($credentials);
@@ -70,7 +81,7 @@ class WebGains extends \Oara\Network
         $loginUrlArray["uk"] = 'http://www.webgains.com/loginform.html?action=login';
         $loginUrlArray["fr"] = 'http://www.webgains.fr/loginform.html?action=login';
         $loginUrlArray["us"] = 'http://us.webgains.com/loginform.html?action=login';
-        $loginUrlArray["de"] = 'http://www.webgains.de/loginform.html?action=login';
+        $loginUrlArray["de"] = 'https://www.webgains.de/front/user/login';
         $loginUrlArray["fr"] = 'http://www.webgains.fr/loginform.html?action=login';
         $loginUrlArray["nl"] = 'http://www.webgains.nl/loginform.html?action=login';
         $loginUrlArray["dk"] = 'http://www.webgains.dk/loginform.html?action=login';
@@ -79,20 +90,32 @@ class WebGains extends \Oara\Network
         $loginUrlArray["ie"] = 'http://www.webgains.ie/loginform.html?action=login';
         $loginUrlArray["it"] = 'http://www.webgains.it/loginform.html?action=login';
 
-        $valuesLogin = array(
-            new \Oara\Curl\Parameter('user_type', 'affiliateuser'),
-            new \Oara\Curl\Parameter('username', $this->_user),
-            new \Oara\Curl\Parameter('password', $this->_password)
-        );
 
         foreach ($loginUrlArray as $country => $url) {
 
-            $urls = array();
-            $urls[] = new \Oara\Curl\Request($url, $valuesLogin);
-            $exportReport = $this->_client->post($urls);
-            if (\preg_match("/logout.html/", $exportReport[0])) {
+            $postValues = array(
+                'username' => USERNAME,
+                'password' => PASSWORD,
+                'user_type' => 'affiliateuser'
+            );
+
+            $curl = curl_init();
+            curl_setopt($curl, CURLOPT_URL, LOGIN_ACTION_URL);
+            curl_setopt($curl, CURLOPT_POST, true);
+            curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query($postValues));
+            curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
+            curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($curl, CURLOPT_COOKIEJAR, COOKIE_FILE);
+            curl_setopt($curl, CURLOPT_USERAGENT, USER_AGENT);
+            curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($curl, CURLOPT_REFERER, $url);
+            curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
+            $result = curl_exec($curl);
+
+            if (\preg_match("/logout.html/", $result)) {
+                //echo "login succesfull";
                 $this->_server = $serverArray[$country];
-                $this->_campaignMap = self::getCampaignMap($exportReport[0]);
+                $this->_campaignMap = self::getCampaignMap($result);
                 break;
             }
         }
