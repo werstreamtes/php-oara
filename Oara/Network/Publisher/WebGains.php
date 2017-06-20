@@ -41,16 +41,6 @@ class WebGains extends \Oara\Network
      */
     public function login($credentials)
     {
-        define('USERNAME', 'bravogutschein');
-
-        define('PASSWORD', 'WeBravoWG');
-
-        define('USER_AGENT', 'Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.2309.372 Safari/537.36');
-
-        define('COOKIE_FILE', 'cookie.txt');
-
-        define('LOGIN_ACTION_URL', 'https://www.webgains.de/loginform.html?action=login');
-
 
         $this->_user = $credentials['user'];
         $this->_password = $credentials['password'];
@@ -78,35 +68,36 @@ class WebGains extends \Oara\Network
         $serverArray["it"] = 'www.webgains.it';
 
         $loginUrlArray = array();
-        $loginUrlArray["uk"] = 'http://www.webgains.com/loginform.html?action=login';
-        $loginUrlArray["fr"] = 'http://www.webgains.fr/loginform.html?action=login';
-        $loginUrlArray["us"] = 'http://us.webgains.com/loginform.html?action=login';
-        $loginUrlArray["de"] = 'https://www.webgains.de/front/user/login';
-        $loginUrlArray["fr"] = 'http://www.webgains.fr/loginform.html?action=login';
-        $loginUrlArray["nl"] = 'http://www.webgains.nl/loginform.html?action=login';
-        $loginUrlArray["dk"] = 'http://www.webgains.dk/loginform.html?action=login';
-        $loginUrlArray["se"] = 'http://www.webgains.se/loginform.html?action=login';
-        $loginUrlArray["es"] = 'http://www.webgains.es/loginform.html?action=login';
-        $loginUrlArray["ie"] = 'http://www.webgains.ie/loginform.html?action=login';
-        $loginUrlArray["it"] = 'http://www.webgains.it/loginform.html?action=login';
+        $loginUrlArray["uk"] = 'https://www.webgains.com/loginform.html?action=login';
+        $loginUrlArray["fr"] = 'https://www.webgains.fr/loginform.html?action=login';
+        $loginUrlArray["us"] = 'https://us.webgains.com/loginform.html?action=login';
+        $loginUrlArray["de"] = 'https://www.webgains.de/loginform.html?action=login';
+        $loginUrlArray["fr"] = 'https://www.webgains.fr/loginform.html?action=login';
+        $loginUrlArray["nl"] = 'https://www.webgains.nl/loginform.html?action=login';
+        $loginUrlArray["dk"] = 'https://www.webgains.dk/loginform.html?action=login';
+        $loginUrlArray["se"] = 'https://www.webgains.se/loginform.html?action=login';
+        $loginUrlArray["es"] = 'https://www.webgains.es/loginform.html?action=login';
+        $loginUrlArray["ie"] = 'https://www.webgains.ie/loginform.html?action=login';
+        $loginUrlArray["it"] = 'https://www.webgains.it/loginform.html?action=login';
 
 
         foreach ($loginUrlArray as $country => $url) {
 
             $postValues = array(
-                'username' => USERNAME,
-                'password' => PASSWORD,
+                // Get user/password from credentials
+                'username' => $this->_user,
+                'password' => $this->_password,
                 'user_type' => 'affiliateuser'
             );
 
             $curl = curl_init();
-            curl_setopt($curl, CURLOPT_URL, LOGIN_ACTION_URL);
+            curl_setopt($curl, CURLOPT_URL, $url);
             curl_setopt($curl, CURLOPT_POST, true);
             curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query($postValues));
             curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
             curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($curl, CURLOPT_COOKIEJAR, COOKIE_FILE);
-            curl_setopt($curl, CURLOPT_USERAGENT, USER_AGENT);
+            curl_setopt($curl, CURLOPT_COOKIEJAR, 'cookie.txt');
+            curl_setopt($curl, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.2309.372 Safari/537.36');
             curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($curl, CURLOPT_REFERER, $url);
             curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
