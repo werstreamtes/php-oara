@@ -142,28 +142,35 @@ class NetAffiliation extends \Oara\Network
     {
         $merchants = array();
 
-        $valuesFormExport = array();
-        $urls = array();
-        $urls[] = new \Oara\Curl\Request('http://www'.$this->_serverNumber.'.netaffiliation.com/affiliate/webservice', $valuesFormExport);
+        try {
+            $valuesFormExport = array();
+            $urls = array();
+            $urls[] = new \Oara\Curl\Request('http://www' . $this->_serverNumber . '.netaffiliation.com/affiliate/webservice', $valuesFormExport);
 
-        $exportReport = $this->_client->get($urls);
+            $exportReport = $this->_client->get($urls);
 
-        if (\preg_match ("/function genereCodeLogin\(\) { return '(.+)?'; }/", $exportReport[0], $match)){
-            $content = \file_get_contents("http://flux.netaffiliation.com/flux_prog.php?taff=".$match[1]);
-            $xml = @\simplexml_load_string($content, "SimpleXMLElement", \LIBXML_NOCDATA);
-            $json = \json_encode($xml);
-            $merchantArray = \json_decode($json,TRUE);
-            foreach($merchantArray["prog"] as $merchant){
-                if (isset($merchant["@attributes"]) && $merchant["@attributes"]["etat"] == 'on'){
-                    $obj = array();
-                    $obj['cid'] =  $merchant["@attributes"]["id"];
-                    $obj['name'] = $merchant["title"];
-                    $merchants[] = $obj;
+            if (\preg_match("/function genereCodeLogin\(\) { return '(.+)?'; }/", $exportReport[0], $match)) {
+                $content = \file_get_contents("http://flux.netaffiliation.com/flux_prog.php?taff=" . $match[1]);
+                $xml = @\simplexml_load_string($content, "SimpleXMLElement", \LIBXML_NOCDATA);
+                $json = \json_encode($xml);
+                $merchantArray = \json_decode($json, TRUE);
+                foreach ($merchantArray["prog"] as $merchant) {
+                    if (isset($merchant["@attributes"]) && $merchant["@attributes"]["etat"] == 'on') {
+                        $obj = array();
+                        $obj['cid'] = $merchant["@attributes"]["id"];
+                        $obj['name'] = $merchant["title"];
+                        $merchants[] = $obj;
+                    }
+
                 }
-
             }
         }
-
+        catch(\Exception $e) {
+            // Avoid lost of transactions if one date failed - <PN> - 2017-06-20
+            echo PHP_EOL . (New \DateTime())->format("d/m/Y H:i:s") . " - NetAffiliation - Error in getMerchantList: " . $e->getMessage() . PHP_EOL;
+            sleep(1);
+            return $merchants;
+        }
         return $merchants;
     }
 
