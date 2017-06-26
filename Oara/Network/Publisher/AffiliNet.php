@@ -30,8 +30,8 @@ namespace Oara\Network\Publisher;
  */
 class AffiliNet extends \Oara\Network
 {
-    private $_client = null;
-    private $_token = null;
+    protected $_client = null;
+    protected $_token = null;
     private $_paymentHistory = null;
     /**
      * @param $credentials
@@ -231,7 +231,7 @@ class AffiliNet extends \Oara\Network
     /**
      * Call to the API controlling the exception and Login
      */
-    private function affilinetCall($call, $ws, $params, $try = 0, $currentPage = 0)
+    protected function affilinetCall($call, $ws, $params, $try = 0, $currentPage = 0)
     {
         $result = null;
         try {
@@ -278,7 +278,7 @@ class AffiliNet extends \Oara\Network
      * @param $rowsReturned
      * @return int
      */
-    private function calculeIterationNumber($rowAvailable, $rowsReturned)
+    protected function calculeIterationNumber($rowAvailable, $rowsReturned)
     {
         $iterationDouble = (double)($rowAvailable / $rowsReturned);
         $iterationInt = (int)($rowAvailable / $rowsReturned);
