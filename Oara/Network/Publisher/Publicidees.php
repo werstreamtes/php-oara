@@ -146,9 +146,7 @@ class Publicidees extends \Oara\Network
             echo "pwd ".$this->_password."<br>";
             echo "url: ".('http://api.publicidees.com/subid.php5?p='.$this->_user.'&k='.$this->_password.'')."<br>";
 */
-            $response = file_get_contents ('http://api.publicidees.com/subid.php5?p='.$this->_user.'&k='.$this->_password.'');
-
-
+            $response = file_get_contents ('http://api.publicidees.com/subid.php5?p='.$this->_user.'&k='.$this->_password.'&dd='.$dStartDate->format('Y-m-d').'&df='.$dEndDate->format('Y-m-d'));
 
             //echo "<br><br>RESPONSE<br><br>";
             //var_dump($response);
@@ -215,22 +213,25 @@ class Publicidees extends \Oara\Network
                         echo "<br><br><br><br><br><br><br><br>";
                     }
             */
-            $i=0;
+            // $i=0;
             foreach ($ids->program as $program) {
                 foreach ($program->action as $action) {
                     //echo $action['ProgramComID']."<br>";
                     //var_dump($action);
+                    /*
                     $i++;
                     if ($i<6)
                         echo "action[ActionDate]: ".$action['ActionDate']."<br>";
-
+                    */
                     $transaction = Array();
                     $transaction['merchantId'] = $program[0]['id'];
-                    $transaction['unique_id'] = $action['ProgramComID'];
+                    $transaction['unique_id'] = $action['id'];
                     $transaction['date'] = $action['ActionDate'];
+                    $transaction["validation_date"] = $action['ValidationDate'];    // Future use - <PN>
                     $transaction['amount'] = $action['CartAmount'];
-                    $transaction['commission'] = $action['ProgramCommission'];
-                    $transaction['title'] = $action['Title'];
+                    $transaction['program_commission'] = $action['ProgramCommission'];  // format "5.000%" or "0.000EUR" - Future use
+                    $transaction['commission'] = $action['ActionCommission'];
+                    $transaction['title'] = urldecode($action['Title']) ;
                     $transaction['currency'] = $action['ProgramCurrency'];
                     $transaction['custom_id'] = $action['SubID'];
                     $transaction['status'] = null;
@@ -244,17 +245,15 @@ class Publicidees extends \Oara\Network
                         $transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
                         $transaction['approved'] = true;
                     }
-
                     $totalTransactions[] = $transaction;
                 }
             }
 
 
         } catch (\Exception $e) {
+            echo PHP_EOL . "Publicidees - getTransactionList err: ".$e->getMessage().PHP_EOL;
             throw new \Exception($e->getMessage());
         }
-
-        //var_dump($totalTransactions);
         return $totalTransactions;
 
     }
