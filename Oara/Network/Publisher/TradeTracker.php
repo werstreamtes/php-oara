@@ -35,7 +35,7 @@ class TradeTracker extends \Oara\Network
     public function login($credentials)
     {
         $user = $credentials['user'];
-        $password = $credentials['apipassword'];
+        $password = $credentials['password'];
 
         $wsdlUrl = 'http://ws.tradetracker.com/soap/affiliate?wsdl';
         //Setting the client.
@@ -85,6 +85,7 @@ class TradeTracker extends \Oara\Network
         $merchants = array();
 
         $merchantsAux = array();
+        // <TODO> Dont' use "getAffiliateSites" ... try "getCampaigns" instead
         $options = array('assignmentStatus' => 'accepted');
         $affiliateSitesList = $this->_apiClient->getAffiliateSites();
         foreach ($affiliateSitesList as $affiliateSite) {
@@ -126,30 +127,46 @@ class TradeTracker extends \Oara\Network
             foreach ($this->_apiClient->getConversionTransactions($affiliateSite->ID, $options) as $transaction) {
                 if ($merchantList == null || isset($merchantIdList[(int)$transaction->campaign->ID])) {
                     $object = array();
-
                     $object['unique_id'] = $transaction->ID;
-
                     $object['merchantId'] = $transaction->campaign->ID;
+                    $object['merchantName'] = $transaction->campaign->name;
 
                     $transactionDate = new \DateTime($transaction->registrationDate);
                     $object['date'] = $transactionDate->format("Y-m-d H:i:s");
 
+                    if ($transaction->originatingClickDate != null) {
+                        $clickDate = new \DateTime($transaction->originatingClickDate);
+                        $object['click_date'] = $clickDate->format("Y-m-d H:i:s");
+                    }
+
+                    if ($transaction->assessmentDate != null) {
+                        $assessmentDate = new \DateTime($transaction->assessmentDate);
+                        $object['update_date'] = $assessmentDate->format("Y-m-d H:i:s");
+                    }
+
                     if ($transaction->reference != null) {
                         $object['custom_id'] = $transaction->reference;
                     }
+                    $object['IP'] = $transaction->IP;
 
-                    if ($transaction->transactionStatus == 'accepted') {
-                        $object['status'] = \Oara\Utilities::STATUS_CONFIRMED;
-                    } else
-                        if ($transaction->transactionStatus == 'pending') {
+                    switch ($transaction->transactionStatus) {
+                        case 'accepted':
+                            $object['status'] = \Oara\Utilities::STATUS_CONFIRMED;
+                            break;
+                        case 'pending':
                             $object['status'] = \Oara\Utilities::STATUS_PENDING;
-                        } else
-                            if ($transaction->transactionStatus == 'rejected') {
-                                $object['status'] = \Oara\Utilities::STATUS_DECLINED;
-                            }
-
+                            break;
+                        case 'rejected':
+                            $object['status'] = \Oara\Utilities::STATUS_DECLINED;
+                            break;
+                        default:
+                            $object['status'] = null;
+                            break;
+                    }
+                    $object['currency'] = $transaction->currency;
                     $object['amount'] = \Oara\Utilities::parseDouble($transaction->orderAmount);
                     $object['commission'] = \Oara\Utilities::parseDouble($transaction->commission);
+                    $object['paid'] = $transaction->paidOut;
                     $totalTransactions[] = $object;
                 }
             }
