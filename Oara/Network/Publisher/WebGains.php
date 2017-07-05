@@ -215,7 +215,8 @@ class WebGains extends \Oara\Network
                 }
             }
             foreach ($transactionList as $transactionObject) {
-                if (isset($merchantListIdList[$transactionObject->programID])) {
+                // Dont'check for a valid program - <PN> 2017-07-05
+                // if (isset($merchantListIdList[$transactionObject->programID])) {
 
                     $transaction = array();
                     $transaction['merchantId'] = $transactionObject->programID;
@@ -241,7 +242,7 @@ class WebGains extends \Oara\Network
                             }
                     $transaction['currency'] = $transactionObject->currency;
                     $totalTransactions[] = $transaction;
-                }
+                // }
             }
         }
         return $totalTransactions;
