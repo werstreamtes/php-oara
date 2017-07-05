@@ -229,17 +229,22 @@ class WebGains extends \Oara\Network
                     $transaction['status'] = null;
                     $transaction['amount'] = $transactionObject->saleValue;
                     $transaction['commission'] = $transactionObject->commission;
-                    if ($transactionObject->paymentStatus == 'cleared' || $transactionObject->paymentStatus == 'paid') {
+                    // Check both for status + paymentStatus
+                    if ($transactionObject->status == 'confirmed') {
                         $transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
-                    } else
-                        if ($transactionObject->paymentStatus == 'notcleared') {
-                            $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
-                        } else
-                            if ($transactionObject->paymentStatus == 'cancelled') {
-                                $transaction['status'] = \Oara\Utilities::STATUS_DECLINED;
-                            } else {
-                                throw new \Exception('Error in the transaction status ' . $transactionObject->paymentStatus);
-                            }
+                    }
+                    elseif ($transactionObject->status == 'delayed') {
+                        $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
+                    }
+                    elseif ($transactionObject->status == 'cancelled') {
+                        $transaction['status'] = \Oara\Utilities::STATUS_DECLINED;
+                    }
+                    if ($transactionObject->paymentStatus == 'paid') {
+                        $transaction['paid'] = true;
+                    }
+                    else {
+                        $transaction['paid'] = false;
+                    }
                     $transaction['currency'] = $transactionObject->currency;
                     $totalTransactions[] = $transaction;
                 // }
