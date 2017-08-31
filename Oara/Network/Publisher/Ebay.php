@@ -30,7 +30,7 @@ namespace Oara\Network\Publisher;
  */
 class Ebay extends \Oara\Network
 {
-    private $_client = null;
+    protected $_client = null;
     protected $_sitesAllowed = array();
 
     /**
