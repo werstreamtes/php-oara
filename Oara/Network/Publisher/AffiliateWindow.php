@@ -206,7 +206,7 @@ class AffiliateWindow extends \Oara\Network
      * @param \DateTime|null $dEndDate
      * @return array
      */
-    public function getTransactionList($merchantList = null, \DateTime $dStartDate = null, \DateTime $dEndDate = null)
+    public function getTransactionList($merchantList = null, \DateTime $dStartDate = null, \DateTime $dEndDate = null, $timezone = 'Europe/Berlin')
     {
         $totalTransactions = array();
 
@@ -222,9 +222,10 @@ class AffiliateWindow extends \Oara\Network
             $dEndTime_ = $dEndDate->format("H:s:i");
             $dEndDate = urlencode($dEndDate_ . "T" . $dEndTime_);
             $dStartDate = urlencode($dStartDate_ . "T" . $dStartTime_);
+            $timezone = urlencode($timezone);
             //echo "<br>start date " . $dStartDate;
             //$url = 'https://api.awin.com/publishers/'.$id.'/transactions/?accessToken='.$pwd.'&startDate=2017-02-20T00%3A00%3A00&endDate=2017-02-21T01%3A59%3A59&timezone=Europe/Berlin';
-            $url = 'https://api.awin.com/publishers/' . $id . '/transactions/?accessToken=' . $pwd . '&startDate=' . $dStartDate . '&endDate=' . $dEndDate . '&timezone=Europe/Berlin';
+            $url = 'https://api.awin.com/publishers/' . $id . '/transactions/?accessToken=' . $pwd . '&startDate=' . $dStartDate . '&endDate=' . $dEndDate . '&timezone=' . $timezone;
             $result = \file_get_contents($url);
             //var_dump($result);
             if ($result === false)

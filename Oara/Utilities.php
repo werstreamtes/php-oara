@@ -30,26 +30,55 @@ namespace Oara;
  */
 class Utilities
 {
+
     /**
-     * confirmed status
+     * sales confirmed status
      * @var string
      */
     const STATUS_CONFIRMED = 'confirmed';
     /**
-     * pending status
+     * sales pending status
      * @var string
      */
     const STATUS_PENDING = 'pending';
     /**
-     * declined status
+     * sales declined status
      * @var string
      */
     const STATUS_DECLINED = 'declined';
     /**
-     * paid status
+     * sales paid status
      * @var string
      */
     const STATUS_PAID = 'paid';
+
+
+    /**
+     * offer type Voucher
+     * @var string
+     */
+    const OFFER_TYPE_VOUCHER = 'voucher';
+    /**
+     * offer type Discount
+     * @var string
+     */
+    const OFFER_TYPE_DISCOUNT = 'discount';
+    /**
+     * offer type Free Article
+     * @var string
+     */
+    const OFFER_TYPE_FREE_ARTICLE = 'free_article';
+    /**
+     * offer type Free Shipping
+     * @var string
+     */
+    const OFFER_TYPE_FREE_SHIPPING = 'free_shipping';
+    /**
+     * offer type Lottery / Raffle / Competition
+     * @var string
+     */
+    const OFFER_TYPE_LOTTERY = 'lottery';
+
 
     /**
      * Clone the array.
