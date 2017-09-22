@@ -120,6 +120,35 @@ class AffiliNet extends \Oara\Network
         return $merchantListResult;
     }
 
+
+    public function getVouchers()
+    {
+        $vouchersListResult = array();
+
+        //Set the webservice
+        $publisherInboxServiceUrl = 'https://api.affili.net/V2.0/PublisherInbox.svc?wsdl';
+        $publisherInboxService = new \SoapClient($publisherInboxServiceUrl, array('compression' => SOAP_COMPRESSION_ACCEPT | SOAP_COMPRESSION_GZIP | SOAP_COMPRESSION_DEFLATE, 'soap_version' => SOAP_1_1));
+        //Call the function
+        $params = Array('Query' => '');
+
+        $currentPage = 1;
+        $voucherRead = 0;
+        $totalResults = 9999;
+
+        while ($voucherRead < $totalResults && $currentPage < 9) {
+            $voucherList = self::affilinetCall('voucher', $publisherInboxService, $params, 0, $currentPage);
+            $totalResults = $voucherList->TotalResults;
+            $vouchers = $voucherList->VoucherCodeCollection->VoucherCodeItem;
+            $voucherRead += count($vouchers);
+            $currentPage++;
+
+            foreach($vouchers as $voucherItem) {
+                $vouchersListResult[] = $voucherItem;
+            }
+        }
+        return $vouchersListResult;
+    }
+
     /**
      * @param null $merchantList
      * @param \DateTime|null $dStartDate
@@ -240,6 +269,12 @@ class AffiliNet extends \Oara\Network
                 case 'merchant':
                     $result = $ws->GetMyPrograms(array('CredentialToken' => $this->_token,
                         'GetProgramsRequestMessage' => $params));
+                    break;
+                case 'voucher':
+                    $displaySettings = array('CurrentPage' => $currentPage, 'PageSize' => 1000, 'SortBy' => 'Id', 'SortOrder' => 'Ascending');
+                    $result = $ws->SearchVoucherCodes(array('CredentialToken' => $this->_token,
+                        'DisplaySettings' => $displaySettings,
+                        'SearchVoucherCodesRequestMessage' => $params));
                     break;
                 case 'transaction':
                     $pageSettings = array("CurrentPage" => $currentPage, "PageSize" => 100);
