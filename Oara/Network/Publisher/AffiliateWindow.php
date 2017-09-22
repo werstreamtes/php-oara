@@ -53,83 +53,8 @@ class AffiliateWindow extends \Oara\Network
 
         $this->_userId = $credentials['accountid'];
         $password = $credentials['apipassword'];
-        /*
-        $this->_currency = $credentials['currency'];
 
-                //Login to the website
-                if (filter_var($user, \FILTER_VALIDATE_EMAIL)) {
-
-                    $this->_exportClient = new \Oara\Curl\Access($credentials);
-                    //Log in
-                    $valuesLogin = array(
-                        new \Oara\Curl\Parameter('email', $user),
-                        new \Oara\Curl\Parameter('password', $passwordExport),
-                        new \Oara\Curl\Parameter('Login', '')
-                    );
-                    $urls = array();
-                    $urls[] = new \Oara\Curl\Request('https://darwin.affiliatewindow.com/login?', $valuesLogin);
-                    $this->_exportClient->post($urls);
-
-
-                    $urls = array();
-                    $urls[] = new \Oara\Curl\Request('https://darwin.affiliatewindow.com/user/', array());
-                    $exportReport = $this->_exportClient->get($urls);
-                    if (\preg_match_all('/href=\"\/awin\/affiliate\/.*\".*id=\"goDarwin(.*)\"/', $exportReport[0], $matches)) {
-
-                        foreach ($matches[1] as $user) {
-                            $urls = array();
-                            $urls[] = new \Oara\Curl\Request('https://darwin.affiliatewindow.com/awin/affiliate/' . $user, array());
-                            $exportReport = $this->_exportClient->get($urls);
-
-                            $doc = new \DOMDocument();
-                            @$doc->loadHTML($exportReport[0]);
-                            $xpath = new \DOMXPath($doc);
-                            $linkList = $xpath->query('//a');
-                            $href = null;
-                            foreach ($linkList as $link) {
-                                $text = \trim($link->nodeValue);
-                                if ($text == "Manage API Credentials") {
-                                    $href = $link->attributes->getNamedItem("href")->nodeValue;
-                                    break;
-                                }
-                            }
-                            if ($href != null) {
-                                $urls = array();
-                                $urls[] = new \Oara\Curl\Request('https://darwin.affiliatewindow.com' . $href, array());
-                                $exportReport = $this->_exportClient->get($urls);
-
-                                $doc = new \DOMDocument();
-                                @$doc->loadHTML($exportReport[0]);
-                                $xpath = new \DOMXPath($doc);
-                                $linkList = $xpath->query("//span[@id='aw_api_password_hash']");
-                                foreach ($linkList as $link) {
-                                    $text = \trim($link->nodeValue);
-                                    if ($text == $password) {
-                                        $this->_userId = $user;
-                                        break;
-                                    }
-                                }
-
-                            } else {
-                                throw new \Exception("It couldn't connect to darwin");
-                            }
-                        }
-                    }
-                } else {
-                    throw new \Exception("It's not an email");
-                }
-
-
-        */
-        //echo  $this->_userId." pwd ".$password;
-        $nameSpace = 'http://api.affiliatewindow.com/';
-        $wsdlUrl = 'http://api.affiliatewindow.com/v6/AffiliateService?wsdl';
-        //Setting the client.
-        $this->_apiClient = new \SoapClient($wsdlUrl, array('login' => $this->_userId, 'encoding' => 'UTF-8', 'password' => $password, 'compression' => SOAP_COMPRESSION_ACCEPT | SOAP_COMPRESSION_GZIP | SOAP_COMPRESSION_DEFLATE, 'soap_version' => SOAP_1_1));
-        $soapHeader1 = new \SoapHeader($nameSpace, 'UserAuthentication', array('iId' => $this->_userId, 'sPassword' => $password, 'sType' => 'affiliate'), true, $nameSpace);
-        $soapHeader2 = new \SoapHeader($nameSpace, 'getQuota', true, true, $nameSpace);
-        $this->_apiClient->__setSoapHeaders(array($soapHeader1, $soapHeader2));
-
+        $this->_exportClient = new \Oara\Curl\Access($credentials);
     }
 
     /**
@@ -177,28 +102,71 @@ class AffiliateWindow extends \Oara\Network
     }
 
     /**
+     * Get list of Merchants (with a relationship i.e. approved)
      * @return array
      */
     public function getMerchantList()
     {
         $merchantList = array();
-        //echo "step getMerchantList";
-/*
-        $params = array();
-        $params['sRelationship'] = 'joined';
-        $merchants = $this->_apiClient->getMerchantList($params)->getMerchantListReturn;
-        foreach ($merchants as $merchant) {
-            if (count($this->_sitesAllowed) == 0  ||\in_array($merchant->oPrimaryRegion->sCountryCode, $this->_sitesAllowed)) {
-                $merchantArray = array();
-                $merchantArray["cid"] = $merchant->iId;
-                $merchantArray["name"] = $merchant->sName;
-                $merchantArray["url"] = $merchant->sDisplayUrl;
-                $merchantList[] = $merchantArray;
+
+        try {
+            $id = $this->_credentials["accountid"];
+            $pwd = $this->_credentials["apipassword"];
+
+            $urls[] = new \Oara\Curl\Request('https://api.awin.com/publishers/' . $id . '/programmes/?relationship=joined&accessToken=' . $pwd, array());
+            $result = $this->_exportClient->get($urls);
+
+            if ($result === false || !is_array($result))
+            {
+                throw new \Exception("php-oara AffiliateWindow - file_get_contents error");
+            } else {
+                $content = \utf8_encode($result[0]);
+                $merchantList = \json_decode($content);
             }
+        } catch (\Exception $e) {
+            echo "oara step5 :".$e->getMessage()."\n ";
+            throw new \Exception($e);
         }
-*/
+
         return $merchantList;
     }
+
+    /**
+     * Get list of Vouchers / Coupons / Offers
+     * @param $apiKey   Api Key is needed to access data feed
+     * @return array
+     */
+    public function getVouchers($apiKey)
+    {
+        $vouchers = array();
+
+        try {
+
+            $id = $this->_credentials["accountid"];
+            $params = array(
+                new \Oara\Curl\Parameter('promotionType', 'voucher'),
+                new \Oara\Curl\Parameter('categoryIds', ''),
+                new \Oara\Curl\Parameter('regionIds', ''),
+                new \Oara\Curl\Parameter('advertiserIds', ''),
+                new \Oara\Curl\Parameter('membershipStatus', ''),
+                new \Oara\Curl\Parameter('promotionStatus', 'active'),
+            );
+
+            $urls[] = new \Oara\Curl\Request('https://ui.awin.com/export-promotions/' . $id . '/' . $apiKey . '?', $params);
+            $result = $this->_exportClient->get($urls);
+            if ($result === false || !is_array($result))
+            {
+                throw new \Exception("php-oara AffiliateWindow getVouchers - http error");
+            } else {
+                $vouchers = \str_getcsv($result[0], "\n");
+            }
+        } catch (\Exception $e) {
+            echo "AffiliateWindow getVouchers error:".$e->getMessage()."\n ";
+            throw new \Exception($e);
+        }
+        return $vouchers;
+    }
+
 
     /**
      * @param null $merchantList
@@ -347,4 +315,60 @@ class AffiliateWindow extends \Oara\Network
         }
         return $transactionList;
     }
+
+    /**
+     * Get list of Advertisers
+     * @param $apiKey   Api Key is needed to access data feed
+     * @return array
+     */
+    public function getAdvertisers($apiKey)
+    {
+        $advList = array();
+
+        try {
+            $urls[] = new \Oara\Curl\Request('https://productdata.awin.com/datafeed/list/apikey/' . $apiKey, array());
+            $result = $this->_exportClient->get($urls);
+            if ($result === false || !is_array($result))
+            {
+                throw new \Exception("php-oara AffiliateWindow getAdvertisers - http error");
+            } else {
+                $content = \utf8_encode($result[0]);
+                $advList = \str_getcsv($content, "\n");
+            }
+        } catch (\Exception $e) {
+            echo "AffiliateWindow getAdvertisers error:".$e->getMessage()."\n ";
+            throw new \Exception($e);
+        }
+        return $advList;
+    }
+
+    public function getProducts($apiKey, $feedId)
+    {
+        $products = array();
+
+        if (empty($apiKey) || !is_numeric($feedId)) {
+            return $products;
+        }
+
+        try {
+            $options = $this->_exportClient->getOptions();
+            $options[CURLOPT_ENCODING] = 'GZIP';
+            $this->_exportClient->setOptions($options);
+
+            $urls[] = new \Oara\Curl\Request('http://datafeed.api.productserve.com/datafeed/download/apikey/' . $apiKey . '/fid/' . $feedId . '/format/csv/language/en/delimiter/%2C/compression/gzip/adultcontent/1/columns/aw_deep_link%2Cproduct_name%2Caw_product_id%2Cmerchant_product_id%2Cmerchant_image_url%2Cdescription%2Cmerchant_category%2Csearch_price%2Cmerchant_name%2Cmerchant_id%2Ccategory_name%2Ccategory_id%2Caw_image_url%2Ccurrency%2Cstore_price%2Cdelivery_cost%2Cmerchant_deep_link%2Clanguage%2Clast_updated%2Cbrand_name%2Cbrand_id%2Ccolour%2Cproduct_short_description%2Cspecifications%2Ccondition%2Cproduct_model%2Cmodel_number%2Cdimensions%2Ckeywords%2Cpromotional_text%2Cproduct_type%2Ccommission_group%2Cmerchant_product_category_path%2Cmerchant_product_second_category%2Cmerchant_product_third_category%2Crrp_price%2Csaving%2Csavings_percent%2Cbase_price%2Cbase_price_amount%2Cbase_price_text%2Cproduct_price_old%2Cdelivery_restrictions%2Cdelivery_weight%2Cwarranty%2Cterms_of_contract%2Cdelivery_time%2Cin_stock%2Cstock_quantity%2Cvalid_from%2Cvalid_to%2Cis_for_sale%2Cweb_offer%2Cpre_order%2Cstock_status%2Csize_stock_status%2Csize_stock_amount%2Cmerchant_thumb_url%2Clarge_image%2Calternate_image%2Caw_thumb_url%2Calternate_image_two%2Calternate_image_three%2Creviews%2Caverage_rating%2Crating%2Cnumber_stars%2Cnumber_available%2Ccustom_1%2Ccustom_2%2Ccustom_3%2Ccustom_4%2Ccustom_5%2Ccustom_6%2Ccustom_7%2Ccustom_8%2Ccustom_9%2Cean%2Cisbn%2Cupc%2Cmpn%2Cparent_product_id%2Cproduct_GTIN%2Cbasket_link/', array());
+            $result = $this->_exportClient->get($urls);
+            if ($result === false || !is_array($result))
+            {
+                throw new \Exception("php-oara AffiliateWindow getProducts - http error");
+            } else {
+                $content = gzinflate(substr($result[0],10));
+                $products = \str_getcsv($content, "\n");
+            }
+        } catch (\Exception $e) {
+            echo "php-oara AffiliateWindow getProducts error:".$e->getMessage()."\n ";
+            throw new \Exception($e);
+        }
+        return $products;
+    }
+
 }
