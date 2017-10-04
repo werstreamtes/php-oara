@@ -31,8 +31,8 @@ namespace Oara\Network\Publisher;
 class Belboon extends \Oara\Network
 {
 
-    private $_client = null;
-    private $_platformList = null;
+    protected $_client = null;
+    protected $_platformList = null;
 
     /**
      * @param $credentials
@@ -127,19 +127,23 @@ class Belboon extends \Oara\Network
     public function getTransactionList($merchantList = null, \DateTime $dStartDate = null, \DateTime $dEndDate = null)
     {
         $totalTransactions = array();
+        $records_per_call = 200;
 
         $merchantIdMap = \Oara\Utilities::getMerchantIdMapFromMerchantList($merchantList);
 
-        $result = $this->_client->getEventList(null, null, null, null, null, $dStartDate->format("Y-m-d"), $dEndDate->format("Y-m-d"), null, null, null, null, 0);
+        $offset = 0;
+        while (true) {
+            $num_rercords = 0;
+            $result = $this->_client->getEventList(null, null, null, null, null, $dStartDate->format("Y-m-d"), $dEndDate->format("Y-m-d"), null, null, null, $records_per_call, $offset);
 
-
-        foreach ($result->handler->events as $event) {
-            if (isset($merchantIdMap[$event["programid"]])) {
-
+            foreach ($result->handler->events as $event) {
+                $num_rercords++;
+                // if (isset($merchantIdMap[$event["programid"]])) {
                 $transaction = Array();
                 $transaction['unique_id'] = $event["eventid"];
                 $transaction['merchantId'] = $event["programid"];
                 $transaction['date'] = $event["eventdate"];
+                $transaction['lastchangedate'] = $event["lastchangedate"];
 
                 if ($event["subid"] != null) {
                     $transaction['custom_id'] = $event["subid"];
@@ -161,9 +165,13 @@ class Belboon extends \Oara\Network
                 $transaction['amount'] = \Oara\Utilities::parseDouble($event["netvalue"]);
                 $transaction['commission'] = \Oara\Utilities::parseDouble($event["eventcommission"]);
                 $totalTransactions[] = $transaction;
+                // }
             }
+            if ($num_rercords < $records_per_call) {
+                break;
+            }
+            $offset += $records_per_call;
         }
-
         return $totalTransactions;
     }
 
