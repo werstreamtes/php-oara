@@ -240,19 +240,29 @@ class CommissionJunction extends \Oara\Network
      */
     public function getTransactionList($merchantList = null, \DateTime $dStartDate = null, \DateTime $dEndDate = null)
     {
-
         $totalTransactions = Array();
-        $merchantIdArray = \array_keys(\Oara\Utilities::getMerchantIdMapFromMerchantList($merchantList));
-
-        $iteration = self::calculeIterationNumber(\count($merchantIdArray), '20');
+        if (!is_null($merchantList) && is_array($merchantList) && count($merchantList) > 0) {
+            $merchantIdArray = \array_keys(\Oara\Utilities::getMerchantIdMapFromMerchantList($merchantList));
+            $iteration = self::calculeIterationNumber(\count($merchantIdArray), '20');
+            $byMerchant = true;
+        }
+        else {
+            $iteration = 1;
+            $byMerchant = false;
+        }
         for ($it = 0; $it < $iteration; $it++) {
-            //echo "iteration $it of $iteration \n\n";
-            $merchantSlice = \array_slice($merchantIdArray, $it * 20, 20);
             try {
-
                 $transactionDateEnd = clone $dEndDate;
                 $transactionDateEnd->add(new \DateInterval('P1D'));
-                $restUrl = 'https://commission-detail.api.cj.com/v3/commissions?cids=' . \implode(',', $merchantSlice) . '&date-type=posting&start-date=' . $dStartDate->format("Y-m-d") . '&end-date=' . $transactionDateEnd->format("Y-m-d");
+                if ($byMerchant) {
+                    // Only selected merchants
+                    $merchantSlice = \array_slice($merchantIdArray, $it * 20, 20);
+                    $restUrl = 'https://commission-detail.api.cj.com/v3/commissions?cids=' . \implode(',', $merchantSlice) . '&date-type=posting&start-date=' . $dStartDate->format("Y-m-d") . '&end-date=' . $transactionDateEnd->format("Y-m-d");
+                }
+                else {
+                    // All merchants
+                    $restUrl = 'https://commission-detail.api.cj.com/v3/commissions?date-type=posting&start-date=' . $dStartDate->format("Y-m-d") . '&end-date=' . $transactionDateEnd->format("Y-m-d");
+                }
                 $totalTransactions = \array_merge($totalTransactions, self::getTransactionsXml($restUrl, $merchantList));
             } catch (\Exception $e) {
                 $amountDays = $dStartDate->diff($dEndDate)->days;
@@ -315,9 +325,9 @@ class CommissionJunction extends \Oara\Network
         if (isset($xml->commissions->commission)) {
             foreach ($xml->commissions->commission as $singleTransaction) {
 
-                if (\count($this->_sitesAllowed) == 0 || \in_array ( ( int ) self::findAttribute ( $singleTransaction, 'website-id' ), $this->_sitesAllowed )) {
+                if (\count($this->_sitesAllowed) == 0 || \in_array(( int )self::findAttribute($singleTransaction, 'website-id'), $this->_sitesAllowed)) {
 
-                    if (isset($merchantIdList[(int)self::findAttribute($singleTransaction, 'cid')])) {
+                    if (count($merchantIdList) == 0 || isset($merchantIdList[(int)self::findAttribute($singleTransaction, 'cid')])) {
 
                         $transaction = Array();
                         $transaction ['unique_id'] = self::findAttribute($singleTransaction, 'commission-id');//self::findAttribute($singleTransaction, 'original-action-id');
@@ -357,6 +367,13 @@ class CommissionJunction extends \Oara\Network
                         $transaction ['original'] = self::findAttribute($singleTransaction, 'original');
                         $totalTransactions[] = $transaction;
                     }
+                }
+            }
+        }
+        else {
+            if ($xml->count() > 0) {
+                foreach($xml->children() as $key => $value) {
+                    echo $key .  ": " . (string) $value . PHP_EOL;
                 }
             }
         }
