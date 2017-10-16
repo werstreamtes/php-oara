@@ -32,10 +32,15 @@ class Skimlinks extends \Oara\Network
 {
     protected $_sitesAllowed = array();
     /**
+     *  Account id - user
+     * @var string
+     */
+    private $_account_id = null;
+    /**
      * Public API Key
      * @var string
      */
-    private $_publicapikey = null;
+    private $_apikey = null;
     /**
      * Private API Key
      * @var string
@@ -48,8 +53,11 @@ class Skimlinks extends \Oara\Network
     public function login($credentials)
     {
         $this->_client = new \Oara\Curl\Access($credentials);
-        $this->_publicapikey = $credentials['user'];
-        $this->_privateapikey = $credentials['apipassword'];
+        $this->_account_id = $credentials['user'];
+        $this->_privateapikey = $credentials['private_apikey'];
+        $this->_apikey = $credentials['apikey'];
+        $this->_country = $credentials['country'];
+        $this->_id_site = $credentials['id_site'];
     }
 
     /**
@@ -69,7 +77,7 @@ class Skimlinks extends \Oara\Network
         $parameter["description"] = "API Password";
         $parameter["required"] = true;
         $parameter["name"] = "API";
-        $credentials["apipassword"] = $parameter;
+        $credentials["private_apikey"] = $parameter;
 
         return $credentials;
     }
@@ -96,59 +104,62 @@ class Skimlinks extends \Oara\Network
      */
     public function getMerchantList()
     {
-        $publicapikey = $this->_publicapikey;
-        $privateapikey = $this->_privateapikey;
+        $account_id = $this->_account_id;
+        $apikey = $this->_apikey;
+        $country = $this->_country;
 
-        $date = new \DateTime();
-        $timestamp = $date->getTimestamp();
-        $authtoken = \md5($timestamp . $privateapikey);
+        $a_merchants = Array();
+        $limit = 100; //default 25
+        $offset = 0;
 
-        $merchants = Array();
+        while (true) {
 
-        $valuesFromExport = array(
-            new \Oara\Curl\Parameter('version', '0.5'),
-            new \Oara\Curl\Parameter('timestamp', $timestamp),
-            new \Oara\Curl\Parameter('apikey', $publicapikey),
-            new \Oara\Curl\Parameter('authtoken', $authtoken),
-            new \Oara\Curl\Parameter('startdate', '2009-01-01'), //minimum date
-            new \Oara\Curl\Parameter('enddate', $date->format("Y-m-d")),
-            new \Oara\Curl\Parameter('format', 'json')
-        );
-
-        $urls = array();
-        $urls[] = new \Oara\Curl\Request("https://api-reports.skimlinks.com/publisher/reportmerchants?", $valuesFromExport);
-        $exportReport = $this->_client->get($urls);
-        $jsonArray = json_decode($exportReport[0], true);
-
-        $iteration = 0;
-        while (\count($jsonArray["skimlinksAccount"]["merchants"]) != 0) {
-            foreach ($jsonArray["skimlinksAccount"]["merchants"] as $i) {
-                $obj = Array();
-                $obj['cid'] = $i["merchantID"];
-                $obj['name'] = $i["merchantName"];
-                $merchants[] = $obj;
-            }
-            $iteration++;
             $valuesFromExport = array(
-                new \Oara\Curl\Parameter('version', '0.5'),
-                new \Oara\Curl\Parameter('timestamp', $timestamp),
-                new \Oara\Curl\Parameter('apikey', $publicapikey),
-                new \Oara\Curl\Parameter('authtoken', $authtoken),
-                new \Oara\Curl\Parameter('startdate', '2009-01-01'), //minimum date
-                new \Oara\Curl\Parameter('enddate', $date->format("Y-m-d")),
-                new \Oara\Curl\Parameter('format', 'json'),
-                new \Oara\Curl\Parameter('responseFrom', $iteration * 100),
-
+                new \Oara\Curl\Parameter('apikey', $apikey),
+                new \Oara\Curl\Parameter('account_type', 'publisher_admin'),
+                new \Oara\Curl\Parameter('account_id', $account_id),
+                new \Oara\Curl\Parameter('country', $country),
             );
 
+            array_push($valuesFromExport,
+                new \Oara\Curl\Parameter('limit', $limit),
+                new \Oara\Curl\Parameter('offset', $offset)
+            );
+            $n_records = 0;
             $urls = array();
-            $urls[] = new \Oara\Curl\Request("https://api-reports.skimlinks.com/publisher/reportmerchants?", $valuesFromExport);
-            $exportReport = $this->_client->get($urls);
-            $jsonArray = json_decode($exportReport[0], true);
+
+            $urls[] = new \Oara\Curl\Request("https://merchants.skimapis.com/v3/merchants?", $valuesFromExport);
+            try {
+                $exportReport = $this->_client->get($urls);
+                $jsonArray = json_decode($exportReport[0], true);
+
+                foreach ($jsonArray["merchants"] as $i) {
+                    $n_records++;
+                    $merchant = Array();
+
+                    $merchant['id'] = $i["id"];
+                    $merchant['name'] = $i["name"];
+
+                    $a_merchants[] = $merchant;
+                }
+                if ($n_records < $limit) {
+                    break;
+                }
+                $offset += $limit;
+                $limit = 100;
+            }
+            catch(\Exception $e){
+                if ($limit == 1){
+                    $offset += $limit;
+                }
+                else{
+                    $limit = (int)($limit / 2);
+                }
+                $n_records = $limit;
+            }
         }
 
-
-        return $merchants;
+        return $a_merchants;
     }
 
     /**
@@ -162,37 +173,34 @@ class Skimlinks extends \Oara\Network
     {
 
         $totalTransactions = array();
-
-        $publicapikey = $this->_publicapikey;
+        //<JC> end_date cannot be in the future
+        if ($dEndDate > new \DateTime()){
+            $dEndDate = new \DateTime();
+        }
         $privateapikey = $this->_privateapikey;
 
         $date = new \DateTime();
         $timestamp = $date->getTimestamp();
-        $authtoken = md5($timestamp . $privateapikey);
+        $token = md5($timestamp . $privateapikey);
 
         if (\count($this->_sitesAllowed) == 0) {
             $valuesFromExport = array(
-                new \Oara\Curl\Parameter('version', '0.5'),
                 new \Oara\Curl\Parameter('timestamp', $timestamp),
-                new \Oara\Curl\Parameter('apikey', $publicapikey),
-                new \Oara\Curl\Parameter('authtoken', $authtoken),
-                new \Oara\Curl\Parameter('startDate', $dStartDate->format("Y-m-d")),
-                new \Oara\Curl\Parameter('endDate', $dEndDate->format("Y-m-d")),
-                new \Oara\Curl\Parameter('format', 'json')
+                new \Oara\Curl\Parameter('token', $token),
+                new \Oara\Curl\Parameter('start_date', $dStartDate->format("Y-m-d")),
+                new \Oara\Curl\Parameter('end_date', $dEndDate->format("Y-m-d")),
             );
             $totalTransactions = $this->processTransactions($valuesFromExport);
         } else {
             foreach ($this->_sitesAllowed as $site) {
 
                 $valuesFromExport = array(
-                    new \Oara\Curl\Parameter('version', '0.5'),
                     new \Oara\Curl\Parameter('timestamp', $timestamp),
-                    new \Oara\Curl\Parameter('apikey', $publicapikey),
-                    new \Oara\Curl\Parameter('authtoken', $authtoken),
-                    new \Oara\Curl\Parameter('startDate', $dStartDate->format("Y-m-d")),
-                    new \Oara\Curl\Parameter('endDate', $dEndDate->format("Y-m-d")),
-                    new \Oara\Curl\Parameter('format', 'json'),
-                    new \Oara\Curl\Parameter('domainID', $site)
+                    new \Oara\Curl\Parameter('token', $token),
+                    new \Oara\Curl\Parameter('start_date', $dStartDate->format("Y-m-d")),
+                    new \Oara\Curl\Parameter('end_date', $dEndDate->format("Y-m-d")),
+                    //<JC> Filter commissions with a specific publisher domain ID - get value from Skimlinks > Account > SiteID
+                    new \Oara\Curl\Parameter('domain_id', $site)
                 );
                 $totalTransactions = $this->processTransactions($valuesFromExport);
             }
@@ -204,34 +212,94 @@ class Skimlinks extends \Oara\Network
     private function processTransactions($valuesFromExport)
     {
         $totalTransactions = array();
-        $urls = array();
-        $urls[] = new \Oara\Curl\Request("https://api-reports.skimlinks.com/publisher/reportcommissions?", $valuesFromExport);
-        $exportReport = $this->_client->get($urls);
-        $jsonArray = \json_decode($exportReport[0], true);
+        $limit = 100; //default 30
+        $offset = 0;
 
-        foreach ($jsonArray["skimlinksAccount"]["commissions"] as $i) {
-            $transaction = Array();
+        while (true) {
 
-            $transaction['merchantId'] = $i["merchantID"];
-            $transaction['unique_id'] = $i["commissionID"];
-            $transaction['date'] = $i["date"] . " 00:00:00";
-            $transaction['amount'] = (double)$i["orderValue"] / 100;
-            $transaction['commission'] = (double)$i["commissionValue"] / 100;
-            $transactionStatus = $i["status"];
-            if ($transactionStatus == "active") {
-                $transaction ['status'] = \Oara\Utilities::STATUS_CONFIRMED;
-            } else if ($transactionStatus == "cancelled") {
-                $transaction ['status'] = \Oara\Utilities::STATUS_DECLINED;
-            } else {
-                throw new \Exception ("New status found {$transactionStatus}");
+            $a_valuesFromExport = $valuesFromExport;
+
+            array_push($a_valuesFromExport,
+                new \Oara\Curl\Parameter('limit', $limit),
+                new \Oara\Curl\Parameter('offset', $offset)
+            );
+
+            $n_records = 0;
+            $urls = array();
+            $urls[] = new \Oara\Curl\Request("https://reporting.skimapis.com/publisher_admin/" . $this->_account_id . "/commission-report?", $a_valuesFromExport);
+            try {
+                $exportReport = $this->_client->get($urls);
+                $jsonArray = \json_decode($exportReport[0], true);
+
+                foreach ($jsonArray["commissions"] as $i) {
+                    $n_records++;
+                    $transaction = Array();
+
+                    if (isset($i["merchant_details"])){
+                        $transaction['merchantId'] = $i["merchant_details"]["id"];
+                    }
+                    $transaction['unique_id'] = $i["commission_id"];
+
+                    if (isset($i["transaction_details"])){
+                        //format datetime Y-m-d H:i:s
+                        $transaction['date'] = $i["transaction_details"]["transaction_date"];
+                        $transaction['last_updated'] = $i["transaction_details"]["last_updated"];
+
+                        if (isset($i["transaction_details"]["basket"])) {
+                            $transaction['amount'] = (double)$i["transaction_details"]["basket"]["order_amount"];
+                            $transaction['commission'] = (double)$i["transaction_details"]["basket"]["publisher_amount"];
+                            $transaction['currency'] = $i["transaction_details"]["basket"]["currency"];
+                        }
+                        $transactionStatus = $i["transaction_details"]["status"];
+                        if ($transactionStatus == "active") {
+                            $transaction ['status'] = \Oara\Utilities::STATUS_CONFIRMED;
+                        } else if ($transactionStatus == "cancelled") {
+                            $transaction ['status'] = \Oara\Utilities::STATUS_DECLINED;
+                        } else {
+                            throw new \Exception ("New status found {$transactionStatus}");
+                        }
+                    }
+                    if (isset($i["click_details"])) {
+                        if ($i["click_details"]["custom_id"] != null) {
+                            $transaction['custom_id'] = $i["click_details"]["custom_id"];
+                        }
+                        $transaction['click_date'] = $i["click_details"]["date"];
+                    }
+                    if (isset($i["publisher_id"])){
+                        //<JC> publisher_id as providers.api_userid
+                        $transaction['publisher_id'] = $i["publisher_id"];
+                    }
+                    if (isset($i["publisher_domain_id"])){
+                        //<JC> publisher_domain_id as providers.id_site
+                        $transaction['publisher_domain_id'] = $i["publisher_domain_id"];
+                    }
+                    $totalTransactions[] = $transaction;
+                }
+                if ($n_records < $limit) {
+                    break;
+                }
+                $offset += $limit;
+                $limit = 100;
             }
-            if ($i["customID"] != null) {
-                $transaction['custom_id'] = $i["customID"];
+            catch(\Exception $e){
+                if ($limit == 1){
+                    $offset += $limit;
+                }
+                else{
+                    $limit = (int)($limit / 2);
+                }
+                $n_records = $limit;
             }
-
-            $totalTransactions[] = $transaction;
         }
         return $totalTransactions;
     }
+
+    /**
+     * @param string $idSite
+     */
+    public function addAllowedSite(string $idSite){
+        $this->_sitesAllowed[]=$idSite;
+    }
+
 
 }
