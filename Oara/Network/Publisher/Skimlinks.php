@@ -109,56 +109,31 @@ class Skimlinks extends \Oara\Network
         $country = $this->_country;
 
         $a_merchants = Array();
-        $limit = 100; //default 25
-        $offset = 0;
 
-        while (true) {
+        //<JC> get Merchants with param 'country'
+        $valuesFromExport = array(
+            new \Oara\Curl\Parameter('apikey', $apikey),
+            new \Oara\Curl\Parameter('account_type', 'publisher_admin'),
+            new \Oara\Curl\Parameter('account_id', $account_id),
+            new \Oara\Curl\Parameter('country', $country)
+        );
 
-            $valuesFromExport = array(
-                new \Oara\Curl\Parameter('apikey', $apikey),
-                new \Oara\Curl\Parameter('account_type', 'publisher_admin'),
-                new \Oara\Curl\Parameter('account_id', $account_id),
-                new \Oara\Curl\Parameter('country', $country),
-            );
+        $a_merchants_country = $this->getMerchantsSkimlinks($valuesFromExport);
 
-            array_push($valuesFromExport,
-                new \Oara\Curl\Parameter('limit', $limit),
-                new \Oara\Curl\Parameter('offset', $offset)
-            );
-            $n_records = 0;
-            $urls = array();
+        //<JC> get favourite Merchants (with param 'favourite_type')
+        $valuesFromExport = array(
+            new \Oara\Curl\Parameter('apikey', $apikey),
+            new \Oara\Curl\Parameter('account_type', 'publisher_admin'),
+            new \Oara\Curl\Parameter('account_id', $account_id),
+            new \Oara\Curl\Parameter('favourite_type', 'favourite')
+        );
 
-            $urls[] = new \Oara\Curl\Request("https://merchants.skimapis.com/v3/merchants?", $valuesFromExport);
-            try {
-                $exportReport = $this->_client->get($urls);
-                $jsonArray = json_decode($exportReport[0], true);
+        $a_favourite_merchants = $this->getMerchantsSkimlinks($valuesFromExport);
 
-                foreach ($jsonArray["merchants"] as $i) {
-                    $n_records++;
-                    $merchant = Array();
-
-                    $merchant['id'] = $i["id"];
-                    $merchant['name'] = $i["name"];
-
-                    $a_merchants[] = $merchant;
-                }
-                if ($n_records < $limit) {
-                    break;
-                }
-                $offset += $limit;
-                $limit = 100;
-            }
-            catch(\Exception $e){
-                if ($limit == 1){
-                    $offset += $limit;
-                }
-                else{
-                    $limit = (int)($limit / 2);
-                }
-                $n_records = $limit;
-            }
-        }
-
+        //<JC> Merge arrays...
+        $a_merchants = array_merge($a_merchants_country, $a_favourite_merchants);
+        //<JC> Remove duplicates
+        $a_merchants = array_map("unserialize", array_unique(array_map("serialize", $a_merchants)));
         return $a_merchants;
     }
 
@@ -299,6 +274,59 @@ class Skimlinks extends \Oara\Network
      */
     public function addAllowedSite(string $idSite){
         $this->_sitesAllowed[]=$idSite;
+    }
+
+    /**
+     * @param $a_params Parameters
+     * @return array Merchants
+     */
+    public function getMerchantsSkimlinks($a_params):array {
+
+        $a_merchants = Array();
+        $limit = 100; //default 25
+        $offset = 0;
+
+        while (true) {
+
+            array_push($a_params,
+                new \Oara\Curl\Parameter('limit', $limit),
+                new \Oara\Curl\Parameter('offset', $offset)
+            );
+            $n_records = 0;
+            $urls = array();
+
+            $urls[] = new \Oara\Curl\Request("https://merchants.skimapis.com/v3/merchants?", $a_params);
+            try {
+                $exportReport = $this->_client->get($urls);
+                $jsonArray = json_decode($exportReport[0], true);
+
+                foreach ($jsonArray["merchants"] as $i) {
+                    $n_records++;
+                    $merchant = Array();
+
+                    $merchant['id'] = $i["id"];
+                    $merchant['name'] = $i["name"];
+
+                    $a_merchants[] = $merchant;
+                }
+                if ($n_records < $limit) {
+                    break;
+                }
+                $offset += $limit;
+                $limit = 100;
+            }
+            catch(\Exception $e){
+                if ($limit == 1){
+                    $offset += $limit;
+                }
+                else{
+                    $limit = (int)($limit / 2);
+                }
+                $n_records = $limit;
+            }
+        }
+
+        return $a_merchants;
     }
 
 
