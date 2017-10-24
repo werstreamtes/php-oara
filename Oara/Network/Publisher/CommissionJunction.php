@@ -43,19 +43,7 @@ class CommissionJunction extends \Oara\Network
     {
         $this->_apiPassword = $credentials['apipassword'];
 
-        /*$this->_client = new \Oara\Curl\Access($credentials);
-
-        $loginUrl = 'https://members.cj.com/member/foundation/memberlogin.do?';
-        $valuesLogin = array(new \Oara\Curl\Parameter('uname', $user),
-            new \Oara\Curl\Parameter('pw', $password),
-            new \Oara\Curl\Parameter('submit.x', '6'),
-            new \Oara\Curl\Parameter('submit.y', '8')
-        );
-
-        $urls = array();
-        $urls[] = new \Oara\Curl\Request($loginUrl, $valuesLogin);
-        $this->_client->post($urls);*/
-
+        $this->_website_id = $credentials['id_site'];
     }
 
     /**
@@ -70,12 +58,6 @@ class CommissionJunction extends \Oara\Network
         $parameter["required"] = true;
         $parameter["name"] = "User";
         $credentials["user"] = $parameter;
-
-        /*$parameter = array();
-        $parameter["description"] = "Password to Log in";
-        $parameter["required"] = true;
-        $parameter["name"] = "Password";
-        $credentials["password"] = $parameter;*/
 
         $parameter = array();
         $parameter["description"] = "API Password ";
@@ -490,5 +472,14 @@ class CommissionJunction extends \Oara\Network
             }
         }
         return $paymentHistory;
+    }
+
+    /**
+     * @param string $idSite
+     */
+    public function addAllowedSite(string $idSite){
+        if (!in_array($idSite, $this->_sitesAllowed)){
+            $this->_sitesAllowed[]=$idSite;
+        }
     }
 }
