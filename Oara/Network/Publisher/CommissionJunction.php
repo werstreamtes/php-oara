@@ -315,8 +315,9 @@ class CommissionJunction extends \Oara\Network
                         $transaction ['unique_id'] = self::findAttribute($singleTransaction, 'commission-id');//self::findAttribute($singleTransaction, 'original-action-id');
                         $transaction ['action'] = self::findAttribute($singleTransaction, 'action-type');
                         $transaction['merchantId'] = self::findAttribute($singleTransaction, 'cid');
-                        $transactionDate = \DateTime::createFromFormat("Y-m-d\TH:i:s", \substr(self::findAttribute($singleTransaction, 'event-date'), 0, 19));
-                        $transaction['date'] = $transactionDate->format("Y-m-d H:i:s");
+                        //event-date - The associated event date for the item in UTC time zone.
+                        $transactionDate = \DateTime::createFromFormat("Y-m-d\TH:i:sO", (self::findAttribute($singleTransaction, 'event-date')));
+                        $transaction['date'] = $transactionDate->format("Y-m-d H:i:sO");
                         $transaction['custom_id'] = '';
                         if (self::findAttribute($singleTransaction, 'sid') != null) {
                             $transaction['custom_id'] = self::findAttribute($singleTransaction, 'sid');
