@@ -42,6 +42,10 @@ class WebGains extends \Oara\Network
     public function login($credentials)
     {
 
+        if ($this->_server != null) {
+            return;
+        }
+
         $this->_user = $credentials['user'];
         $this->_password = $credentials['password'];
         $this->_client = new \Oara\Curl\Access($credentials);
@@ -59,7 +63,6 @@ class WebGains extends \Oara\Network
         $serverArray["fr"] = 'www.webgains.fr';
         $serverArray["us"] = 'us.webgains.com';
         $serverArray["de"] = 'www.webgains.de';
-        $serverArray["fr"] = 'www.webgains.fr';
         $serverArray["nl"] = 'www.webgains.nl';
         $serverArray["dk"] = 'www.webgains.dk';
         $serverArray["se"] = 'www.webgains.se';
@@ -72,7 +75,6 @@ class WebGains extends \Oara\Network
         $loginUrlArray["fr"] = 'https://www.webgains.fr/loginform.html?action=login';
         $loginUrlArray["us"] = 'https://us.webgains.com/loginform.html?action=login';
         $loginUrlArray["de"] = 'https://www.webgains.de/loginform.html?action=login';
-        $loginUrlArray["fr"] = 'https://www.webgains.fr/loginform.html?action=login';
         $loginUrlArray["nl"] = 'https://www.webgains.nl/loginform.html?action=login';
         $loginUrlArray["dk"] = 'https://www.webgains.dk/loginform.html?action=login';
         $loginUrlArray["se"] = 'https://www.webgains.se/loginform.html?action=login';
@@ -96,7 +98,8 @@ class WebGains extends \Oara\Network
             curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query($postValues));
             curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
             curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($curl, CURLOPT_COOKIEJAR, 'cookie.txt');
+            curl_setopt($curl, CURLOPT_COOKIEJAR, 'webgains_cookie.txt');
+            curl_setopt($curl, CURLOPT_COOKIEFILE, 'webgains_cookie.txt');
             curl_setopt($curl, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.2309.372 Safari/537.36');
             curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($curl, CURLOPT_REFERER, $url);
@@ -252,4 +255,44 @@ class WebGains extends \Oara\Network
         }
         return $totalTransactions;
     }
+
+
+    /**
+     * Get list of Vouchers / Coupons / Offers
+     * @param $id_site   account ID needed to access data feed
+     * @return array
+     */
+    public function getVouchers($id_site)
+    {
+        $vouchers = array();
+
+        try {
+
+            $url = $this->_server . '/publisher/' . $id_site . '/ad/vouchercodes/downloadcsv?';
+
+            $curl = curl_init();
+            curl_setopt($curl, CURLOPT_URL, $url);
+            curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
+            curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($curl, CURLOPT_COOKIEJAR, 'webgains_cookie.txt');
+            curl_setopt($curl, CURLOPT_COOKIEFILE, 'webgains_cookie.txt');
+            curl_setopt($curl, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.2309.372 Safari/537.36');
+            curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($curl, CURLOPT_REFERER, $url);
+            curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
+            $result = curl_exec($curl);
+
+            if ($result === false)
+            {
+                throw new \Exception("php-oara WebGains getVouchers - http error");
+            } else {
+                $vouchers = \str_getcsv($result, "\n");
+            }
+        } catch (\Exception $e) {
+            echo "WebGains getVouchers error:".$e->getMessage()."\n ";
+            throw new \Exception($e);
+        }
+        return $vouchers;
+    }
+
 }
