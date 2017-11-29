@@ -36,6 +36,7 @@ class LinkShare extends \Oara\Network
     protected $_sitesAllowed = array();
     private $_client = null;
     private $_siteList = array();
+    private $_idSite = null;
 
     /**
      * @param $credentials
@@ -44,6 +45,7 @@ class LinkShare extends \Oara\Network
     {
         $user = $credentials ['user'];
         $password = $credentials ['password'];
+        $this->_idSite = $credentials ['idSite'];
         $this->_client = new \Oara\Curl\Access ($credentials);
 
         $loginUrl = 'https://login.linkshare.com/sso/login?service=' . \urlencode("http://cli.linksynergy.com/cli/publisher/home.php");
@@ -234,6 +236,9 @@ class LinkShare extends \Oara\Network
         $merchantIdList = \Oara\Utilities::getMerchantIdMapFromMerchantList($merchantList);
 
         foreach ($this->_siteList as $site) {
+            if (!empty($this->_idSite) && !$site == $this->_idSite){
+                break;
+            }
             if (empty($this->_sitesAllowed) || in_array($site->id, $this->_sitesAllowed)) {
                 echo "getting Transactions for site " . $site->id . "\n\n";
 
