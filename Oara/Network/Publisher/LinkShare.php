@@ -384,120 +384,129 @@ class LinkShare extends \Oara\Network
             // https://api.rakutenmarketing.com/coupon/1.0?category=16&promotiontype=31&network=1&resultsperpage=100&pagenumber=2
 
             $loginUrl = "https://api.rakutenmarketing.com/coupon/1.0";
-
-            $params = array(
-                // new \Oara\Curl\Parameter('category', '1|2|3|4|5|6|7|8'),
-                // new \Oara\Curl\Parameter('promotiontype', 31),
-                new \Oara\Curl\Parameter('network', $network),
-                new \Oara\Curl\Parameter('resultperpage', 100),
-                new \Oara\Curl\Parameter('pagenumber', 1)
-            );
-
-            $p = array();
-            foreach ($params as $parameter) {
-                $p[] = $parameter->getKey() . '=' . \urlencode($parameter->getValue());
-            }
-            $post_params = implode('&', $p);
-
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $loginUrl . '?' . $post_params);
-            curl_setopt($ch, CURLOPT_POST, FALSE);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, array("Authorization: Bearer " . $token));
-
-            $curl_results = curl_exec($ch);
-            curl_close($ch);
-
+            $currentPage = 1;
             $arrResult = array();
-            $response = xml2array($curl_results);
-            if(!is_array($response) || count($response) <= 0) {
-                return $arrResult;
-            }
-            $couponfeed = $response['couponfeed'];
-            $totalMatches = $couponfeed['TotalMatches'];
-            $totalPages = $couponfeed['TotalPages'];
-            $currentPage = $couponfeed['PageNumberRequested'];
 
-            if ($totalMatches > 0) {
-                $a_links = $couponfeed['link'];
-                foreach ($a_links as $key => $link) {
-                    $description = isset($link['offerdescription']) ? $link['offerdescription'] : '';
-                    $start_date = isset($link['offerstartdate']) ? $link['offerstartdate'] : '';
-                    $end_date = isset($link['offerenddate']) ? $link['offerenddate'] : '';
-                    $coupon_code = isset($link['couponcode']) ? $link['couponcode'] : '';
-                    $coupon_restriction = isset($link['couponrestriction']) ? $link['couponrestriction'] : '';
-                    $click_url = isset($link['clickurl']) ? $link['clickurl'] : '';
-                    $impression_pixel = isset($link['impressionpixel']) ? $link['impressionpixel'] : '';
-                    $advertiser_id = isset($link['advertiserid']) ? $link['advertiserid'] : '';
-                    $advertiser_name = isset($link['advertisername']) ? $link['advertisername'] : '';
-                    $network_id = isset($link['networkid']) ? $link['networkid'] : '';
-                    $promotion_types = isset($link['promotiontypes']) ? $link['promotiontypes'] : '';
-                    $promotion_type = isset($promotion_types['promotiontype']) ? $promotion_types['promotiontype'] : '';
-                    $promotion_type_code = isset($promotion_types['promotiontype_attr']) ? $promotion_types['promotiontype_attr']['id'] : '0';
+            while (true) {
+                $params = array(
+                    // Optional parameters category / promotiontype
+                    // new \Oara\Curl\Parameter('category', '1|2|3|4|5|6|7|8'),
+                    // new \Oara\Curl\Parameter('promotiontype', 31),
+                    new \Oara\Curl\Parameter('network', $network),
+                    new \Oara\Curl\Parameter('resultsperpage', 100),
+                    new \Oara\Curl\Parameter('pagenumber', $currentPage)
+                );
 
-                    /*
-                    <promotiontype id="2">Buy One / Get One</promotiontype>
-                    <promotiontype id="3">Clearance</promotiontype>
-                    <promotiontype id="4">Combination Savings</promotiontype>
-                    <promotiontype id="14">Deal of the Day/Week</promotiontype>
-                    <promotiontype id="13">Free Delivery</promotiontype>
-                    <promotiontype id="6">Free Trial / Usage</promotiontype>
-                    <promotiontype id="8">Friends and Family</promotiontype>
-                    <promotiontype id="1">General Promotion</promotiontype>
-                    <promotiontype id="9">Gift with Purchase</promotiontype>
-                    <promotiontype id="10">Other</promotiontype>
-                    <promotiontype id="11">Percentage off</promotiontype>
-                    <promotiontype id="12">Pounds amount off</promotiontype>
-                     */
-
-                    switch ($promotion_type_code) {
-                        case '2':
-                            $type = \Oara\Utilities::OFFER_TYPE_FREE_ARTICLE;
-                            break;
-                        case 3:
-                        case 4:
-                        case 14:
-                        case 6:
-                        case 8:
-                        case 1:
-                        case 10:
-                            $type = \Oara\Utilities::OFFER_TYPE_VOUCHER;
-                            break;
-                        case 13:
-                            // <promotiontype id="13">Free Delivery</promotiontype>
-                            $type = \Oara\Utilities::OFFER_TYPE_FREE_SHIPPING;
-                            break;
-                        case 9:
-                            // <promotiontype id="9">Gift with Purchase</promotiontype>
-                            $type = \Oara\Utilities::OFFER_TYPE_FREE_ARTICLE;
-                            break;
-                        case 11:
-                            // <promotiontype id="11">Percentage off</promotiontype>
-                            $type = \Oara\Utilities::OFFER_TYPE_DISCOUNT;
-                            break;
-                        case 12:
-                            // <promotiontype id="12">Pounds amount off</promotiontype>
-                            $type = \Oara\Utilities::OFFER_TYPE_DISCOUNT;
-                            break;
-                        default:
-                            $type = \Oara\Utilities::OFFER_TYPE_VOUCHER;
-                    }
-
-                    $arrResult[] = array(
-                        'promotionId' => '',
-                        'advertiser_id' => $advertiser_id,
-                        'advertiser_name' => $advertiser_name,
-                        'code' => $coupon_code,
-                        'description' => $description,
-                        'restriction' => $coupon_restriction,
-                        'start_date' => $start_date,
-                        'end_date' => $end_date,
-                        'tracking' => $click_url,
-                        'type' => $type
-                    );
+                $p = array();
+                foreach ($params as $parameter) {
+                    $p[] = $parameter->getKey() . '=' . \urlencode($parameter->getValue());
                 }
+                $post_params = implode('&', $p);
+
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_URL, $loginUrl . '?' . $post_params);
+                curl_setopt($ch, CURLOPT_POST, FALSE);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, array("Authorization: Bearer " . $token));
+
+                $curl_results = curl_exec($ch);
+                curl_close($ch);
+
+                $response = xml2array($curl_results);
+                if (!is_array($response) || count($response) <= 0) {
+                    return $arrResult;
+                }
+                $couponfeed = $response['couponfeed'];
+                $totalMatches = $couponfeed['TotalMatches'];
+                $totalPages = $couponfeed['TotalPages'];
+                $currentPage = $couponfeed['PageNumberRequested'];
+
+                if ($totalMatches > 0) {
+                    $a_links = $couponfeed['link'];
+                    foreach ($a_links as $key => $link) {
+                        $description = isset($link['offerdescription']) ? $link['offerdescription'] : '';
+                        $start_date = isset($link['offerstartdate']) ? $link['offerstartdate'] : '';
+                        $end_date = isset($link['offerenddate']) ? $link['offerenddate'] : '';
+                        $coupon_code = isset($link['couponcode']) ? $link['couponcode'] : '';
+                        $coupon_restriction = isset($link['couponrestriction']) ? $link['couponrestriction'] : '';
+                        $click_url = isset($link['clickurl']) ? $link['clickurl'] : '';
+                        $impression_pixel = isset($link['impressionpixel']) ? $link['impressionpixel'] : '';
+                        $advertiser_id = isset($link['advertiserid']) ? $link['advertiserid'] : '';
+                        $advertiser_name = isset($link['advertisername']) ? $link['advertisername'] : '';
+                        $network_id = isset($link['networkid']) ? $link['networkid'] : '';
+                        $promotion_types = isset($link['promotiontypes']) ? $link['promotiontypes'] : '';
+                        $promotion_type = isset($promotion_types['promotiontype']) ? $promotion_types['promotiontype'] : '';
+                        $promotion_type_code = isset($promotion_types['promotiontype_attr']) ? $promotion_types['promotiontype_attr']['id'] : '0';
+
+                        /*
+                        <promotiontype id="2">Buy One / Get One</promotiontype>
+                        <promotiontype id="3">Clearance</promotiontype>
+                        <promotiontype id="4">Combination Savings</promotiontype>
+                        <promotiontype id="14">Deal of the Day/Week</promotiontype>
+                        <promotiontype id="13">Free Delivery</promotiontype>
+                        <promotiontype id="6">Free Trial / Usage</promotiontype>
+                        <promotiontype id="8">Friends and Family</promotiontype>
+                        <promotiontype id="1">General Promotion</promotiontype>
+                        <promotiontype id="9">Gift with Purchase</promotiontype>
+                        <promotiontype id="10">Other</promotiontype>
+                        <promotiontype id="11">Percentage off</promotiontype>
+                        <promotiontype id="12">Pounds amount off</promotiontype>
+                         */
+
+                        switch ($promotion_type_code) {
+                            case '2':
+                                $type = \Oara\Utilities::OFFER_TYPE_FREE_ARTICLE;
+                                break;
+                            case 3:
+                            case 4:
+                            case 14:
+                            case 6:
+                            case 8:
+                            case 1:
+                            case 10:
+                                $type = \Oara\Utilities::OFFER_TYPE_VOUCHER;
+                                break;
+                            case 13:
+                                // <promotiontype id="13">Free Delivery</promotiontype>
+                                $type = \Oara\Utilities::OFFER_TYPE_FREE_SHIPPING;
+                                break;
+                            case 9:
+                                // <promotiontype id="9">Gift with Purchase</promotiontype>
+                                $type = \Oara\Utilities::OFFER_TYPE_FREE_ARTICLE;
+                                break;
+                            case 11:
+                                // <promotiontype id="11">Percentage off</promotiontype>
+                                $type = \Oara\Utilities::OFFER_TYPE_DISCOUNT;
+                                break;
+                            case 12:
+                                // <promotiontype id="12">Pounds amount off</promotiontype>
+                                $type = \Oara\Utilities::OFFER_TYPE_DISCOUNT;
+                                break;
+                            default:
+                                $type = \Oara\Utilities::OFFER_TYPE_VOUCHER;
+                        }
+
+                        $arrResult[] = array(
+                            'promotionId' => '',
+                            'advertiser_id' => $advertiser_id,
+                            'advertiser_name' => $advertiser_name,
+                            'code' => $coupon_code,
+                            'description' => $description,
+                            'restriction' => $coupon_restriction,
+                            'start_date' => $start_date,
+                            'end_date' => $end_date,
+                            'tracking' => $click_url,
+                            'type' => $type
+                        );
+                    }
+                }
+                if ($currentPage >= $totalPages) {
+                    // End of results
+                    break;
+                }
+                $currentPage++;
             }
 
             return $arrResult;
