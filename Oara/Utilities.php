@@ -101,7 +101,7 @@ class Utilities
      */
     public static function parseDouble($data)
     {
-        $data = \preg_replace('/[^0-9\.,]/', "", $data);
+        $data = \preg_replace('/[^0-9\.,-]/', "", $data);
         $data = \str_replace(" ", "", \trim($data));
         $double = 0;
         if ($data != null) {
