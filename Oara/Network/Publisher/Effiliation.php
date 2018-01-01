@@ -115,7 +115,8 @@ class Effiliation extends \Oara\Network
                 $transaction = Array();
                 $merchantId = (int)$transactionExportArray[2];
                 $transaction['merchantId'] = $merchantId;
-                $transaction['date'] = $transactionExportArray[10];
+                // Changed Transaction date index from 10 to 13 - 2018-01-01 <PN>
+                $transaction['date'] = $transactionExportArray[13];
                 $transaction['unique_id'] = $transactionExportArray[0];
                 $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
                 if ($transactionExportArray[15] != null) {
