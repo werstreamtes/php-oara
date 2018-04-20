@@ -109,10 +109,12 @@ class AffiliNet extends \Oara\Network
                 $obj = array();
                 $obj['cid'] = $merchant->ProgramId;
                 $obj['name'] = $merchant->ProgramTitle;
+                // Added more info - 2018-04-20 <PN>
                 $obj['url'] = $merchant->Url;
+                $obj['status'] = $merchant->PartnershipStatus;
+                $obj['launch_date'] = $merchant->LaunchDate;
                 $merchantListResult[] = $obj;
             }
-
         } else {
             $merchantListResult = array();
         }
