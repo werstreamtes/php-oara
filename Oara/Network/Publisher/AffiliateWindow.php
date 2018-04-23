@@ -107,28 +107,38 @@ class AffiliateWindow extends \Oara\Network
      */
     public function getMerchantList()
     {
-        $merchantList = array();
+        $merchants = array();
 
         try {
             $id = $this->_credentials["accountid"];
             $pwd = $this->_credentials["apipassword"];
-
-            $urls[] = new \Oara\Curl\Request('https://api.awin.com/publishers/' . $id . '/programmes/?relationship=joined&accessToken=' . $pwd, array());
-            $result = $this->_exportClient->get($urls);
-
-            if ($result === false || !is_array($result))
-            {
-                throw new \Exception("php-oara AffiliateWindow - file_get_contents error");
-            } else {
-                $content = \utf8_encode($result[0]);
-                $merchantList = \json_decode($content);
+            $a_status = ['notjoined','joined','pending','suspended','rejected'];
+            foreach($a_status as $status) {
+                // Get single status programs
+                $merchantList = array();
+                $urls = [];
+                $urls[] = new \Oara\Curl\Request('https://api.awin.com/publishers/' . $id . '/programmes/?relationship=' . $status . '&accessToken=' . $pwd, array());
+                $result = $this->_exportClient->get($urls);
+                if ($result === false || !is_array($result)) {
+                    throw new \Exception("php-oara AffiliateWindow - file_get_contents error");
+                } else {
+                    $content = \utf8_encode($result[0]);
+                    $merchantList = \json_decode($content);
+                }
+                foreach ($merchantList as $merchant) {
+                    $obj = array();
+                    $obj['cid'] = $merchant->id;
+                    $obj['name'] = $merchant->name;
+                    $obj['url'] = $merchant->displayUrl;
+                    $obj['status'] = $status;
+                    $merchants[] = $obj;
+                }
             }
         } catch (\Exception $e) {
             echo "oara step5 :".$e->getMessage()."\n ";
             throw new \Exception($e);
         }
-
-        return $merchantList;
+        return $merchants;
     }
 
     /**

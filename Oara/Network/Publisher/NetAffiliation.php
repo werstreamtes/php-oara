@@ -155,13 +155,22 @@ class NetAffiliation extends \Oara\Network
                 $json = \json_encode($xml);
                 $merchantArray = \json_decode($json, TRUE);
                 foreach ($merchantArray["prog"] as $merchant) {
-                    if (isset($merchant["@attributes"]) && $merchant["@attributes"]["etat"] == 'on') {
+                    if (isset($merchant["@attributes"])) {
                         $obj = array();
                         $obj['cid'] = $merchant["@attributes"]["id"];
-                        $obj['name'] = $merchant["title"];
+                        $obj['status'] = $merchant["@attributes"]["etat"];
+                        if ($merchant["@attributes"]["etat"] == 'on') {
+                            $obj['name'] = $merchant["title"];
+                            $obj['url'] = $merchant["link"];
+                            $obj['launch_date'] = $merchant['startdate']['@attributes']['date'];
+                        }
+                        else {
+                            $obj['name'] = null;
+                            $obj['url'] = null;
+                            $obj['launch_date'] = null;
+                        }
                         $merchants[] = $obj;
                     }
-
                 }
             }
         }

@@ -130,6 +130,10 @@ class CommissionJunction extends \Oara\Network
             $obj = Array();
             $obj['cid'] = $merchantData[0];
             $obj['name'] = $merchantData[1];
+            // Added more info - 2018-04-23 <PN>
+            $obj['status'] = $merchantData[2];
+            $obj['relationship_status'] = $merchantData[3];
+            $obj['url'] = $merchantData[4];
             $merchants[] = $obj;
         }
         return $merchants;
@@ -169,13 +173,14 @@ class CommissionJunction extends \Oara\Network
             }
         }*/
         $page=1;
-        $per_page=100;
-        $total_pages=1;
+        $per_page = 100;
+        $total_pages = 99;
         do{
-            if ($page>3){
+            if ($page > $total_pages){
                 exit;
             }
-            $response = self::apiCall('https://advertiser-lookup.api.cj.com/v3/advertiser-lookup?advertiser-ids=joined&records-per-page='.$per_page.'&page-number='.$page);
+            // Get All programs even if not active - 2018-04-23 <PN>
+            $response = self::apiCall('https://advertiser-lookup.api.cj.com/v3/advertiser-lookup?advertiser-ids=&records-per-page='.$per_page.'&page-number='.$page);
             $xml = \simplexml_load_string($response, null, LIBXML_NOERROR | LIBXML_NOWARNING);
             if (!isset($xml->advertisers)) {
                 break;
@@ -190,17 +195,28 @@ class CommissionJunction extends \Oara\Network
 
                     if ($key=='advertiser-id'){
                         $adv_id=(string)$value;
-
                     }
                     if ($key=='advertiser-name'){
                         $adv_name=(string)$value;
-
+                    }
+                    // Added more info - 2018-04-23 <PN>
+                    if ($key=='account-status'){
+                        $adv_status=(string)$value;
+                    }
+                    if ($key=='relationship-status'){
+                        $adv_relationship_status=(string)$value;
+                    }
+                    if ($key=='program-url'){
+                        $adv_url=(string)$value;
                     }
                 }
                 if (trim($adv_id)!='' && trim($adv_name)!=''){
                     $merchantReportList[]=[
                         $adv_id,
                         $adv_name,
+                        $adv_status,
+                        $adv_relationship_status,
+                        $adv_url,
                     ] ;
                 }
 
