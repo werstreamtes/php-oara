@@ -251,10 +251,13 @@ class LinkShare extends \Oara\Network
                     if (!isset ($merchantArray [2])) {
                         throw new \Exception ("Error getting merchants");
                     }
-                    $obj ['cid'] = ( int )$merchantArray [2];
-                    $obj ['name'] = $merchantArray [0];
-                    $obj ['description'] = $merchantArray [3];
-                    $obj ['url'] = $merchantArray [1];
+                    $obj['cid'] = ( int )$merchantArray[2];
+                    $obj['name'] = $merchantArray[0];
+                    $obj['description'] = $merchantArray[3];
+                    $obj['url'] = $merchantArray[1];
+                    $obj['status'] = $merchantArray[7];
+                    $obj['termination_date'] = $merchantArray[21];
+
                     $merchants [] = $obj;
                     $merchantIdMap [] = $obj ['cid'];
                 }
