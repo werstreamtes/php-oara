@@ -286,15 +286,20 @@ class Skimlinks extends \Oara\Network
         $limit = 100; //default 25
         $offset = 0;
 
-        while (true) {
+        array_push($a_params,
+            new \Oara\Curl\Parameter('limit', $limit),
+            new \Oara\Curl\Parameter('offset', $offset)
+        );
 
-            array_push($a_params,
-                new \Oara\Curl\Parameter('limit', $limit),
-                new \Oara\Curl\Parameter('offset', $offset)
-            );
+        while (true) {
             $n_records = 0;
             $urls = array();
 
+            foreach($a_params as $key => $param) {
+                if ($param->getKey() == 'offset') {
+                    $param->setValue($offset);
+                }
+            }
             $urls[] = new \Oara\Curl\Request("https://merchants.skimapis.com/v3/merchants?", $a_params);
             try {
                 $exportReport = $this->_client->get($urls);

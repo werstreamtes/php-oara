@@ -104,17 +104,17 @@ class Belboon extends \Oara\Network
     {
         $merchantList = array();
         foreach ($this->_platformList as $platform) {
-            $result = $this->_client->getPrograms($platform["id"], null, \utf8_encode('PARTNERSHIP'), null, null, null, 0);
+            // $result = $this->_client->getPrograms($platform["id"], null, \utf8_encode('PARTNERSHIP'), null, null, null, 0);
+            $result = $this->_client->getPrograms($platform["id"], null, null, null, null, null, 0);
             foreach ($result->handler->programs as $merchant) {
                 $obj = array();
                 $obj["name"] = $merchant["programname"];
                 $obj["cid"] = $merchant["programid"];
                 $obj["url"] = $merchant["advertiserurl"];
+                $obj["status"] = $merchant["partnershipstatus"];
                 $merchantList[] = $obj;
             }
         }
-
-
         return $merchantList;
     }
 
