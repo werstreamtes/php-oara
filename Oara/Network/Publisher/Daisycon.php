@@ -112,9 +112,13 @@ class Daisycon extends \Oara\Network
         $merchants = array();
         $user = $this->_credentials['user'];
         $password = $this->_credentials['password'];
-
+        $id_site = $this->_credentials['idSite'];      // publisher id to retrieve (empty = all publishers)
 
         foreach ($this->_publisherId as $publisherId) {
+            if (!empty($id_site) && $publisherId != $id_site) {
+                // Skip unwanted publisher accounts
+                continue;
+            }
             $page = 1;
             $pageSize = 100;
             $finish = false;
@@ -134,12 +138,17 @@ class Daisycon extends \Oara\Network
                 $merchantList = \json_decode($response, true);
 
                 foreach ($merchantList as $merchant) {
-                    if ($merchant['status'] == 'active') {
+                    // if ($merchant['status'] == 'active') {
                         $obj = Array();
                         $obj['cid'] = $merchant['id'];
                         $obj['name'] = $merchant['name'];
+                        // Added more info - 2018-06-01 <PN>
+                        $obj['status'] = $merchant['status'];
+                        $obj["display_url"] = $merchant['display_url'];
+                        $obj["start_date"] = $merchant['startdate'];
+                        $obj["end_date"] = $merchant['enddate'];
                         $merchants[] = $obj;
-                    }
+                    // }
                 }
 
                 if (\count($merchantList) != $pageSize) {
@@ -148,12 +157,11 @@ class Daisycon extends \Oara\Network
                 $page++;
             }
         }
-
         return $merchants;
     }
 
     /**
-     * @param null $merchantList
+     * @param null $merchantList                array of merchants id to retrieve transactions (empty array or null = all merchants)
      * @param \DateTime|null $dStartDate
      * @param \DateTime|null $dEndDate
      * @return array
@@ -167,8 +175,14 @@ class Daisycon extends \Oara\Network
 
         $user = $this->_credentials['user'];
         $password = $this->_credentials['password'];
+        $id_site = $this->_credentials['idSite'];      // publisher id to retrieve (empty = all publishers)
 
         foreach ($this->_publisherId as $publisherId) {
+            if (!empty($id_site) && $publisherId != $id_site) {
+                // Skip unwanted publisher accounts
+                continue;
+            }
+
             $page = 1;
             $pageSize = 100;
             $finish = false;
@@ -189,34 +203,43 @@ class Daisycon extends \Oara\Network
 
                 foreach ($transactionList as $transaction) {
                     $merchantId = $transaction['program_id'];
-                    if (isset($merchantIdList[$merchantId])) {
-
+                    if (is_array($merchantList) && count($merchantList) > 0 && !isset($merchantIdList[$merchantId])) {
+                        // Skip unwanted merchants (empty merchant array means "all" merchants)
+                        continue;
+                    }
+                    if (!isset($transaction['parts']) || count($transaction['parts']) == 0) {
+                        continue;
+                    }
+                    foreach($transaction['parts'] as $a_part) {
                         $transactionArray = Array();
-                        $transactionArray['unique_id'] = $transaction['affiliatemarketing_id'];
-                        $transactionArray['merchantId'] = $merchantId;
-                        $transactionDate = new \DateTime($transaction['date']);
+                        $transactionArray['unique_id'] = $transaction['affiliatemarketing_id'] . '-' . $a_part['id'];
+                        $transactionArray['merchantId'] = $transaction['program_id'];
+                        $transactionArray['merchantName'] = $transaction['program_name'];
+                        $transactionDate = new \DateTime($a_part['date']);
                         $transactionArray['date'] = $transactionDate->format("Y-m-d H:i:s");
-                        $parts = \current($transaction['parts']);
-                        if ($parts['subid'] != null) {
-                            $transactionArray['custom_id'] = $parts['subid'];
-                        }
-                        if ($parts['status'] == 'approved') {
+                        $transactionDateClick = new \DateTime($a_part['date_click']);
+                        $transactionArray['click_date'] = $transactionDateClick->format("Y-m-d H:i:s");
+                        $transactionDateUpdate = new \DateTime($a_part['last_modified']);
+                        $transactionArray['update_date'] = $transactionDateUpdate->format("Y-m-d H:i:s");
+
+                        $transactionArray['custom_id'] = $a_part['subid'];
+                        if ($a_part['status'] == 'approved') {
                             $transactionArray['status'] = \Oara\Utilities::STATUS_CONFIRMED;
-                        } else
-                            if ($parts['status'] == 'pending' || $parts['status'] == 'potential' || $parts['status'] == 'open') {
-                                $transactionArray['status'] = \Oara\Utilities::STATUS_PENDING;
-                            } else
-                                if ($parts['status'] == 'disapproved' || $parts['status'] == 'incasso') {
-                                    $transactionArray['status'] = \Oara\Utilities::STATUS_DECLINED;
-                                } else {
-                                    throw new \Exception("New status {$parts['status']}");
-                                }
-                        $transactionArray['amount'] = \Oara\Utilities::parseDouble($parts['revenue']);
-                        $transactionArray['commission'] = \Oara\Utilities::parseDouble($parts['commission']);
+                        } elseif ($a_part['status'] == 'pending' || $a_part['status'] == 'potential' || $a_part['status'] == 'open') {
+                            $transactionArray['status'] = \Oara\Utilities::STATUS_PENDING;
+                        } elseif ($a_part['status'] == 'disapproved' || $a_part['status'] == 'incasso') {
+                            $transactionArray['status'] = \Oara\Utilities::STATUS_DECLINED;
+                        } else {
+                            throw new \Exception("Unexpected transaction status {$a_part['status']}");
+                        }
+                        $transactionArray['currency'] = 'EUR';  // Default value
+                        $transactionArray['amount'] = \Oara\Utilities::parseDouble($a_part['revenue']);
+                        $transactionArray['commission'] = \Oara\Utilities::parseDouble($a_part['commission']);
+                        $transactionArray['IP'] = $transaction['anonymous_ip'];
+
                         $totalTransactions[] = $transactionArray;
                     }
                 }
-
                 if (\count($transactionList) != $pageSize) {
                     $finish = true;
                 }
@@ -225,6 +248,52 @@ class Daisycon extends \Oara\Network
         }
 
         return $totalTransactions;
+    }
+
+    /**
+     * @return array
+     */
+    public function getVouchers() {
+
+        $a_vouchers = array();
+
+        $user = $this->_credentials['user'];
+        $password = $this->_credentials['password'];
+        $id_site = $this->_credentials['idSite'];      // publisher id to retrieve (empty = all publishers)
+
+        foreach ($this->_publisherId as $publisherId) {
+            if (!empty($id_site) && $publisherId != $id_site) {
+                // Skip unwanted publisher accounts
+                continue;
+            }
+
+            $page = 1;
+            $pageSize = 100;
+            $finish = false;
+
+            while (!$finish) {
+                $url = "https://services.daisycon.com:443/publishers/$publisherId/material/promotioncodes?page=$page&per_page=$pageSize";
+                // initialize curl resource
+                $ch = \curl_init();
+                // set the http request authentication headers
+                $headers = array('Authorization: Basic ' . \base64_encode($user . ':' . $password));
+                // set curl options
+                \curl_setopt($ch, CURLOPT_URL, $url);
+                \curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+                \curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                // execute curl
+                $response = \curl_exec($ch);
+                $vouchers_list = \json_decode($response, true);
+                foreach ($vouchers_list as $voucher) {
+                    $a_vouchers[] = $voucher;
+                }
+                if (\count($vouchers_list) != $pageSize) {
+                    $finish = true;
+                }
+                $page++;
+            }
+            return $a_vouchers;
+        }
     }
 
 }
