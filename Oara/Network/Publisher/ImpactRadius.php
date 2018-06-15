@@ -34,6 +34,7 @@ class ImpactRadius extends \Oara\Network
     private $_credentials = null;
     private $_accountSid = null;
     private $_authToken = null;
+    private $_merchant_list = null;
 
     /**
      * @param $credentials
@@ -43,7 +44,6 @@ class ImpactRadius extends \Oara\Network
      */
     public function login($credentials)
     {
-
         $this->_credentials = $credentials;
         $this->_client = new \Oara\Curl\Access($credentials);
 
@@ -124,11 +124,14 @@ class ImpactRadius extends \Oara\Network
      */
     public function getMerchantList()
     {
-        $merchants = Array();
-        if (!$this->checkConnection()) {
-            return $merchants;
+        if (!is_null($this->_merchant_list) && is_array($this->_merchant_list)) {
+            return $this->_merchant_list;
         }
-        $uri = "https://" . $this->_accountSid . ":" . $this->_authToken . "@api.impactradius.com/2010-09-01/Mediapartners/" . $this->_accountSid . "/Campaigns.xml";
+        $this->_merchant_list = Array();
+        if (!$this->checkConnection()) {
+            $this->_merchant_list;
+        }
+        $uri = "https://" . $this->_accountSid . ":" . $this->_authToken . "@api.impactradius.com/Mediapartners/" . $this->_accountSid . "/Campaigns";
         $res = \simplexml_load_file($uri);
         $currentPage = (int)$res->Campaigns->attributes()->page;
         $pageNumber = (int)$res->Campaigns->attributes()->numpages;
@@ -140,7 +143,7 @@ class ImpactRadius extends \Oara\Network
                 $obj['name'] = (string)$campaign->CampaignName;
                 $obj['url'] = (string)$campaign->CampaignUrl;
                 $obj['status'] = (string)$campaign->ContractStatus;
-                $merchants[] = $obj;
+                $this->_merchant_list[] = $obj;
             }
 
             $currentPage++;
@@ -149,7 +152,7 @@ class ImpactRadius extends \Oara\Network
                 $res = \simplexml_load_file("https://" . $this->_accountSid . ":" . $this->_authToken . "@api.impactradius.com" . $nextPageUri);
             }
         }
-        return $merchants;
+        return $this->_merchant_list;
     }
 
     /**
@@ -167,7 +170,7 @@ class ImpactRadius extends \Oara\Network
         }
 
         //New Interface
-        $uri = "https://" . $this->_accountSid . ":" . $this->_authToken . "@api.impactradius.com/2010-09-01/Mediapartners/" . $this->_accountSid . "/Actions?ActionDateStart=" . $dStartDate->format('Y-m-d\TH:i:s') . "-00:00&ActionDateEnd=" . $dEndDate->format('Y-m-d\TH:i:s') . "-00:00";
+        $uri = "https://" . $this->_accountSid . ":" . $this->_authToken . "@api.impactradius.com/Mediapartners/" . $this->_accountSid . "/Actions?ActionDateStart=" . $dStartDate->format('Y-m-d\TH:i:s') . "-00:00&ActionDateEnd=" . $dEndDate->format('Y-m-d\TH:i:s') . "-00:00";
         $res = \simplexml_load_file($uri);
         if ($res) {
 
@@ -176,13 +179,53 @@ class ImpactRadius extends \Oara\Network
             while ($currentPage <= $pageNumber) {
 
                 foreach ($res->Actions->Action as $action) {
+
+                    /*
+                     * Example of transaction from API docs
+                      "Id": "3641.3299.182972",
+                      "CampaignId": 3641,
+                      "CampaignName": "Rocket-Powered Products",
+                      "ActionTrackerId": 9026,
+                      "ActionTrackerName": "irt-17721",
+                      "State": "PENDING",
+                      "AdId": 339815,
+                      "Payout": 32252.1922,
+                      "DeltaPayout": 32252.1922,
+                      "IntendedPayout": 32252.1922,
+                      "Amount": 32252.19,
+                      "DeltaAmount": 32252.19,
+                      "IntendedAmount": 32252.19,
+                      "Currency": "USD",
+                      "ReferringDate": "2017-01-11T22:18:42.000Z",
+                      "EventDate": "2017-01-12T19:52:07.000Z",
+                      "CreationDate": "2017-01-16T05:25:15.000Z",
+                      "LockingDate": "2017-02-16T08:00:00.000Z",
+                      "ClearedDate": "2017-02-31T08:00:00.000Z",
+                      "ReferringType": "CLICK_COOKIE",
+                      "ReferringDomain": "www.referring.com",
+                      "PromoCode": "SUMMER_PROMO",
+                      "Oid": "AZ3456-123V",
+                      "CustomerArea": "0",
+                      "CustomerCity": "New York",
+                      "CustomerRegion": "212",
+                      "CustomerCountry": "US",
+                      "SubId1": "custom1",
+                      "SubId2": "custom2",
+                      "SubId3": "custom3",
+                      "SharedId": "custom-shared",
+                      "Uri": "/Mediapartners/IRBcXt64v4pL159338fdubAiqsbdX65535/Actions/3641.3299.182972.json"
+                     */
                     $transaction = Array();
-                    $transaction['merchantId'] = (int)$action->CampaignId;
+                    $transaction['unique_id'] = (string)$action->Id;
+                    $transaction['merchant_id'] = (int)$action->CampaignId;
+                    $transaction['merchant_name'] = (int)$action->CampaignName;
 
                     $transactionDate = \DateTime::createFromFormat("Y-m-d\TH:i:s", \substr((string)$action->EventDate,0,19));
                     $transaction['date'] = $transactionDate->format("Y-m-d H:i:s");
 
-                    $transaction['unique_id'] = (string)$action->Id;
+                    $transactionDate = \DateTime::createFromFormat("Y-m-d\TH:i:s", \substr((string)$action->ReferringDate,0,19));
+                    $transaction['date_click'] = $transactionDate->format("Y-m-d H:i:s");
+
                     if ((string)$action->SharedId != '') {
                         $transaction['custom_id'] = (string)$action->SharedId;
                     }
@@ -190,22 +233,22 @@ class ImpactRadius extends \Oara\Network
                         $transaction['custom_id'] = (string)$action->SubId1;
                     }
 
-                    $status = (string)$action->Status;
+                    $status = (string)$action->State;
                     $statusArray[$status] = "";
                     if ($status == 'APPROVED' || $status == 'DEFAULT') {
                         $transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
                     } else {
-                        if ($status == 'REJECTED') {
+                        if ($status == 'REVERSED' || $status == 'REJECTED') {
                             $transaction['status'] = \Oara\Utilities::STATUS_DECLINED;
                         } else {
                             $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
                         }
                     }
 
-                    // TODO Currency
-                    $transaction['currency'] = 'EUR';
+                    $transaction['currency'] = (string)$action->Currency;
                     $transaction['amount'] = (double)$action->Amount;
                     $transaction['commission'] = (double)$action->Payout;
+                    $transaction['commission_intended'] = (double)$action->IntendedPayout; // ??
                     $totalTransactions[] = $transaction;
                 }
 
@@ -218,6 +261,75 @@ class ImpactRadius extends \Oara\Network
         }
         return $totalTransactions;
 
+    }
+
+    /**
+     * Get list of deals for all active campaings
+     * @return array
+     */
+    public function getDeals()
+    {
+        $a_deals = Array();
+        if (!$this->checkConnection()) {
+            return $a_deals;
+        }
+        $a_merchants = $this->getMerchantList();
+
+        foreach($a_merchants as $merchant) {
+            $merchant_id = $merchant['cid'];
+            $uri = "https://" . $this->_accountSid . ":" . $this->_authToken . "@api.impactradius.com/Mediapartners/" . $this->_accountSid . "/Campaigns/" . $merchant_id . "/Deals";
+            $res = \simplexml_load_file($uri);
+            $currentPage = (int)$res->Deals->attributes()->page;
+            $pageNumber = (int)$res->Deals->attributes()->numpages;
+            while ($currentPage <= $pageNumber) {
+                foreach ($res->Deals->Deal as $deal) {
+                    $obj = Array();
+                    $obj['id'] = (int)$deal->Id;
+                    $obj['name'] = (string)$deal->Name;
+                    $obj['description'] = (string)$deal->Description;
+                    $obj['campaign_id'] = (string)$deal->CampaignId;
+                    $obj['campaign_name'] = $merchant['name'];
+                    $obj['status'] = (string)$deal->State;
+                    $obj['type'] = (string)$deal->Type;
+                    $obj['discount_type'] = (string)$deal->DiscountType;
+                    $obj['discount_amount'] = (float)$deal->DiscountAmount;
+                    $obj['discount_currency'] = (string)$deal->DiscountCurrency;
+                    $obj['discount_percent'] = (float)$deal->DiscountPercent;
+                    $obj['discount_max_percent'] = (float)$deal->DiscountMaximumPercent;
+                    $obj['discount_percent_range_min'] = (float)$deal->DiscountPercentRangeStart;
+                    $obj['discount_percent_range_max'] = (float)$deal->DiscountPercentRangeEnd;
+                    $obj['promo_code'] = (string)$deal->DefaultPromoCode;
+                    $obj['minimum_purchase'] = (float)$deal->MinimumPurchaseAmount;
+                    $obj['minimum_purchase_currency'] = (string)$deal->MinimumPurchaseCurrency;
+                    $obj['url'] = ''; // (string)$deal->Uri;  // It' API url, not tracking url
+
+                    if (!empty($deal->StartDate)) {
+                        $start_date = \DateTime::createFromFormat("Y-m-d\TH:i:s", \substr((string)$deal->StartDate, 0, 19));
+                        $obj['start_date'] = $start_date->format("Y-m-d H:i:s");
+                    }
+                    else {
+                        $obj['start_date'] = '';
+                    }
+
+                    if (!empty($deal->EndDate)) {
+                        $end_date = \DateTime::createFromFormat("Y-m-d\TH:i:s", \substr((string)$deal->EndDate, 0, 19));
+                        $obj['end_date'] = $end_date->format("Y-m-d H:i:s");
+                    }
+                    else {
+                        $obj['end_date'] = '2099-12-31 00:00:00';
+                    }
+
+                    $a_deals[] = $obj;
+                }
+
+                $currentPage++;
+                $nextPageUri = (string)$res->Deals->attributes()->nextpageuri;
+                if ($nextPageUri != null) {
+                    $res = \simplexml_load_file("https://" . $this->_accountSid . ":" . $this->_authToken . "@api.impactradius.com" . $nextPageUri);
+                }
+            }
+        }
+        return $a_deals;
     }
 
     /**
