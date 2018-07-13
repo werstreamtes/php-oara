@@ -339,7 +339,6 @@ class CommissionJunction extends \Oara\Network
                             $transaction['custom_id'] = self::findAttribute($singleTransaction, 'sid');
                         }
 
-                        //$transaction['unique_id'] = self::findAttribute($singleTransaction, 'commission-id');
                         $transaction ['amount'] = \Oara\Utilities::parseDouble(self::findAttribute($singleTransaction, 'sale-amount'));
                         $transaction ['commission'] = \Oara\Utilities::parseDouble(self::findAttribute($singleTransaction, 'commission-amount'));
 
@@ -355,15 +354,20 @@ class CommissionJunction extends \Oara\Network
                             $transaction ['status'] = \Oara\Utilities::STATUS_PENDING;
                         }
 
+                        /*
+                        // Negative commission must be subtracted by original commission identified by the same 'original-action-id' field - 2018-07-13 <PN>
+                        // Only if result is zero the commission could be set DECLINED. This logic must be implemented by the caller!
                         if ($transaction ['amount'] < 0 || $transaction ['commission'] < 0) {
                             $transaction ['status'] = \Oara\Utilities::STATUS_DECLINED;
                             $transaction ['amount'] = \abs($transaction ['amount']);
                             $transaction ['commission'] = \abs($transaction ['commission']);
                         }
+                        */
                         $transaction ['aid'] = self::findAttribute($singleTransaction, 'aid');
-                        //$transaction ['commission-id'] = self::findAttribute($singleTransaction, 'commission-id');
                         $transaction ['order-id'] = self::findAttribute($singleTransaction, 'order-id');
-                        $transaction ['original'] = self::findAttribute($singleTransaction, 'original');
+                        $transaction ['original'] = (self::findAttribute($singleTransaction, 'original') === 'true');
+                        // 'original-action-id' is used as reference field between original commission and adjust/correction commission - 2018-07-13 <PN>
+                        $transaction ['original-action-id'] = self::findAttribute($singleTransaction, 'original-action-id');
                         $totalTransactions[] = $transaction;
                     }
                 }
