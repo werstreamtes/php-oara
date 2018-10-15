@@ -130,11 +130,13 @@ class WebGains extends \Oara\Network
         $results = $xpath->query('//select[@name="campaignswitchid"]');
         $merchantLines = $results->item(0)->childNodes;
         for ($i = 0; $i < $merchantLines->length; $i++) {
-            $cid = $merchantLines->item($i)->attributes->getNamedItem("value")->nodeValue;
-            $name = $merchantLines->item($i)->nodeValue;
-            if (\count($this->_sitesAllowed) == 0 || \in_array($name, $this->_sitesAllowed)) {
-                if (\is_numeric($cid)) {
-                    $campaingMap[$cid] = $merchantLines->item($i)->nodeValue;
+            if(count($merchantLines->item($i)->attributes) > 0){
+                $cid = $merchantLines->item($i)->attributes->getNamedItem("value")->nodeValue;
+                $name = $merchantLines->item($i)->nodeValue;
+                if (\count($this->_sitesAllowed) == 0 || \in_array($name, $this->_sitesAllowed)) {
+                    if (\is_numeric($cid)) {
+                        $campaingMap[$cid] = $merchantLines->item($i)->nodeValue;
+                    }
                 }
             }
         }
