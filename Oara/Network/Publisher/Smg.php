@@ -49,7 +49,7 @@ class Smg extends \Oara\Network
 
         $user = $this->_credentials['user'];
         $password = $this->_credentials['password'];
-        $loginUrl = 'https://member.impactradius.co.uk/secure/login.user';
+        $loginUrl = 'https://app.impact.com/secure/login.user';
 
         $valuesLogin = array(new \Oara\Curl\Parameter('j_username', $user),
             new \Oara\Curl\Parameter('j_password', $password)
@@ -61,23 +61,23 @@ class Smg extends \Oara\Network
 
 
         $urls = array();
-        $urls[] = new \Oara\Curl\Request('https://member.impactradius.co.uk/secure/mediapartner/accountSettings/mp-wsapi-flow.ihtml?', array());
+        $urls[] = new \Oara\Curl\Request('https://app.impact.com/secure/mediapartner/accountSettings/mp-wsapi-flow.ihtml?', array());
         $exportReport = $this->_client->get($urls);
-        $dom = new \Zend_Dom_Query($exportReport[0]);
-        $results = $dom->query('div .uitkFields');
+        $dom = new \Zend\Dom\Query($exportReport[0]);
+        $results = $dom->execute('div .uitkFields');
         $count = \count($results);
         if ($count == 0) {
 
             $activeAPI = array(new \Oara\Curl\Parameter('_eventId', "activate"));
             $urls = array();
-            $urls[] = new \Oara\Curl\Request('https://member.impactradius.co.uk/secure/mediapartner/accountSettings/mp-wsapi-flow.ihtml?', $activeAPI);
+            $urls[] = new \Oara\Curl\Request('https://app.impact.com/secure/mediapartner/accountSettings/mp-wsapi-flow.ihtml?', $activeAPI);
             $this->_client->post($urls);
 
             $urls = array();
-            $urls[] = new \Oara\Curl\Request('https://member.impactradius.co.uk/secure/mediapartner/accountSettings/mp-wsapi-flow.ihtml?', array());
+            $urls[] = new \Oara\Curl\Request('https://app.impact.com/secure/mediapartner/accountSettings/mp-wsapi-flow.ihtml?', array());
             $exportReport = $this->_client->get($urls);
-            $dom = new \Zend_Dom_Query($exportReport[0]);
-            $results = $dom->query('div .uitkFields');
+            $dom = new \Zend\Dom\Query($exportReport[0]);
+            $results = $dom->execute('div .uitkFields');
             $count = \count($results); // get number of matches: 4
             if ($count == 0) {
                 throw new \Exception ("No API credentials");
@@ -126,7 +126,7 @@ class Smg extends \Oara\Network
 
         //Checking connection for the impact Radius website
         $urls = array();
-        $urls[] = new \Oara\Curl\Request('https://member.impactradius.co.uk/secure/mediapartner/home/pview.ihtml', array());
+        $urls[] = new \Oara\Curl\Request('https://app.impact.com/secure/mediapartner/home/pview.ihtml', array());
         $exportReport = $this->_client->get($urls);
         $newCheck = false;
         if (\preg_match('/\/logOut\.user/', $exportReport[0], $match)) {
@@ -229,16 +229,17 @@ class Smg extends \Oara\Network
                         $transaction['custom_id'] = (string)$action->SubId1;
                     }
 
-                    $status = (string)$action->Status;
+                    $status = (string)$action->State;
                     $statusArray[$status] = "";
                     if ($status == 'APPROVED' || $status == 'DEFAULT') {
                         $transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
-                    } else
-                        if ($status == 'REJECTED') {
+                    } else {
+                        if ($status == 'REVERSED' || $status == 'REJECTED') {
                             $transaction['status'] = \Oara\Utilities::STATUS_DECLINED;
                         } else {
                             $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
                         }
+                    }
 
                     $transaction['amount'] = (double)$action->Amount;
                     $transaction['commission'] = (double)$action->Payout;
@@ -265,7 +266,7 @@ class Smg extends \Oara\Network
         $paymentHistory = array();
 
         $urls = array();
-        $urls[] = new \Oara\Curl\Request('https://member.impactradius.co.uk/secure/nositemesh/accounting/getPayStubParamsCSV.csv', array());
+        $urls[] = new \Oara\Curl\Request('https://app.impact.com/secure/nositemesh/accounting/getPayStubParamsCSV.csv', array());
         $exportReport = $this->_client->get($urls);
         $exportData = \str_getcsv($exportReport[0], "\n");
 

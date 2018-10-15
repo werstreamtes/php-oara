@@ -641,10 +641,8 @@ class TradeDoubler extends \Oara\Network
         $exportReport = $this->_client->get($urls);
 
 
-        $doc = new \DOMDocument();
-        @$doc->loadHTML(\Oara\Utilities::DOMinnerHTML($exportReport[0]));
-        $xpath = new \DOMXPath($doc);
-        $results = $xpath->query('//a');
+        $dom = new \Zend\Dom\Query($exportReport[0]);
+        $results = $dom->execute('//a');
 
         $urls = array();
         foreach ($results as $result) {
@@ -656,15 +654,45 @@ class TradeDoubler extends \Oara\Network
             $exportReportData = \str_getcsv($exportReport, "\r\n");
             $num = \count($exportReportData);
             for ($i = 2; $i < $num - 1; $i++) {
-                $transactionArray = \str_getcsv($exportReportData[$i], ";");
-                if ($transactionArray[8] != '') {
-                    $transactionList[] = $transactionArray[8];
-                } else
-                    if ($transactionArray[7] != '') {
-                        $transactionList[] = $transactionArray[7];
-                    } else {
-                        throw new \Exception("No Identifier");
+                $transactionExportArray = \str_getcsv($exportReportData[$i], ";");
+                if (\count($this->_sitesAllowed) == 0 || \in_array($transactionExportArray[2], $this->_sitesAllowed)) {
+                    $transaction = Array();
+                    $transaction['merchantId'] = $transactionExportArray[2];
+                    $transactionDate = self::toDate($transactionExportArray[6]);
+                    $transaction['date'] = $transactionDate->format("Y-m-d H:i:s");
+                    if ($transactionExportArray[8] != '') {
+                        $transaction['unique_id'] = \substr($transactionExportArray[8], 0, 200);
+                    } else
+                        if ($transactionExportArray[7] != '') {
+                            $transaction['unique_id'] = \substr($transactionExportArray[7], 0, 200);
+                        } else {
+                            throw new \Exception("No Identifier");
+                        }
+
+
+                    if ($transactionExportArray[9] != '') {
+                        $transaction['custom_id'] = $transactionExportArray[9];
                     }
+
+                    if ($transactionExportArray[11] == 'A') {
+                        $transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
+                    } else
+                        if ($transactionExportArray[11] == 'P') {
+                            $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
+                        } else
+                            if ($transactionExportArray[11] == 'D') {
+                                $transaction['status'] = \Oara\Utilities::STATUS_DECLINED;
+                            }
+
+                    if ($transactionExportArray[13] != '') {
+                        $transaction['amount'] = \Oara\Utilities::parseDouble($transactionExportArray[13]);
+                    } else {
+                        $transaction['amount'] = \Oara\Utilities::parseDouble($transactionExportArray[14]);
+                    }
+
+                    $transaction['commission'] = \Oara\Utilities::parseDouble($transactionExportArray[15]);
+                    $transactionList[] = $transaction;
+                }
             }
         }
 
