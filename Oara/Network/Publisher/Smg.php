@@ -63,7 +63,7 @@ class Smg extends \Oara\Network
         $urls = array();
         $urls[] = new \Oara\Curl\Request('https://member.impactradius.co.uk/secure/mediapartner/accountSettings/mp-wsapi-flow.ihtml?', array());
         $exportReport = $this->_client->get($urls);
-        $dom = new \Zend_Dom_Query($exportReport[0]);
+        $dom = new \Zend\Dom\Query($exportReport[0]);
         $results = $dom->execute('div .uitkFields');
         $count = \count($results);
         if ($count == 0) {
@@ -76,7 +76,7 @@ class Smg extends \Oara\Network
             $urls = array();
             $urls[] = new \Oara\Curl\Request('https://member.impactradius.co.uk/secure/mediapartner/accountSettings/mp-wsapi-flow.ihtml?', array());
             $exportReport = $this->_client->get($urls);
-            $dom = new \Zend_Dom_Query($exportReport[0]);
+            $dom = new \Zend\Dom\Query($exportReport[0]);
             $results = $dom->execute('div .uitkFields');
             $count = \count($results); // get number of matches: 4
             if ($count == 0) {
