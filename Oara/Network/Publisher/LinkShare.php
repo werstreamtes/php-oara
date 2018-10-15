@@ -334,7 +334,7 @@ class LinkShare extends \Oara\Network
                 for ($j = 1; $j < $num; $j++) {
                     $transactionData = \str_getcsv($exportData [$j], ",");
 
-                    if (count($transactionData) > 10 && (count($merchantIdList)==0 || isset($merchantIdList[$transactionData [1]]))) {
+                    if (count($transactionData) > 10 && (count($merchantIdList)==0 || isset($merchantIdList[$transactionData [3]]))) {
                         $transaction = Array();
                         $transaction['merchantId'] = ( int )$transactionData[3];
                         $transaction['merchantName'] = $transactionData[4];
