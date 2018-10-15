@@ -170,7 +170,7 @@ class AutoEurope extends \Oara\Network
     {
         $pdfContent = '';
         $dom = new \Zend_Dom_Query ($htmlReport);
-        $links = $dom->query('.text a');
+        $links = $dom->execute('.text a');
         $pdfUrl = null;
         foreach ($links as $link) {
             $pdfUrl = $link->getAttribute('href');
