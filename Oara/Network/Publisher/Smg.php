@@ -229,16 +229,17 @@ class Smg extends \Oara\Network
                         $transaction['custom_id'] = (string)$action->SubId1;
                     }
 
-                    $status = (string)$action->Status;
+                    $status = (string)$action->State;
                     $statusArray[$status] = "";
                     if ($status == 'APPROVED' || $status == 'DEFAULT') {
                         $transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
-                    } else
-                        if ($status == 'REJECTED') {
+                    } else {
+                        if ($status == 'REVERSED' || $status == 'REJECTED') {
                             $transaction['status'] = \Oara\Utilities::STATUS_DECLINED;
                         } else {
                             $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
                         }
+                    }
 
                     $transaction['amount'] = (double)$action->Amount;
                     $transaction['commission'] = (double)$action->Payout;
