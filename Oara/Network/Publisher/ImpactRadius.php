@@ -49,7 +49,7 @@ class ImpactRadius extends \Oara\Network
 
         $user = $this->_credentials['user'];
         $password = $this->_credentials['password'];
-        $loginUrl = 'https://member.impactradius.co.uk/secure/login.user';
+        $loginUrl = 'https://app.impact.com/secure/login.user';
 
         $valuesLogin = array(new \Oara\Curl\Parameter('j_username', $user),
             new \Oara\Curl\Parameter('j_password', $password)
@@ -62,7 +62,7 @@ class ImpactRadius extends \Oara\Network
 
         // Open Technical Settings page
         $urls = array();
-        $urls[] = new \Oara\Curl\Request('https://member.impactradius.co.uk/secure/mediapartner/accountSettings/mp-wsapi-flow.ihtml?', array());
+        $urls[] = new \Oara\Curl\Request('https://app.impact.com/secure/mediapartner/accountSettings/mp-wsapi-flow.ihtml?', array());
         $apiPageHTML = $this->_client->get($urls);
 
         // Parse page content
@@ -341,7 +341,7 @@ class ImpactRadius extends \Oara\Network
         $paymentHistory = array();
 
         $urls = array();
-        $urls[] = new \Oara\Curl\Request('https://member.impactradius.co.uk/secure/nositemesh/accounting/getPayStubParamsCSV.csv', array());
+        $urls[] = new \Oara\Curl\Request('https://app.impact.com/secure/nositemesh/accounting/getPayStubParamsCSV.csv', array());
         $exportReport = $this->_client->get($urls);
         $exportData = \str_getcsv($exportReport[0], "\n");
 
