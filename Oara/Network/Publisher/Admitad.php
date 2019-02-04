@@ -226,7 +226,7 @@ class Admitad extends \Oara\Network
 			    $transaction['amount'] = \Oara\Utilities::parseDouble($transactionJson["cart"]);
 			    $transaction['commission'] = \Oara\Utilities::parseDouble($transactionJson["payment"]);
 			    $transaction['currency'] = $transactionJson["currency"];
-			    $transaction['custom_id'] = \Oara\Utilities::parseDouble($transactionJson["subid"]);
+			    $transaction['custom_id'] = $transactionJson["subid"];
 			    $transaction['IP'] = $transactionJson["click_user_ip"];
 			    $transaction['action'] = $transactionJson["action_type"];
 			    if ($transactionJson["status"] == 'pending' || strpos($transactionJson["status"], 'hold') == true || strpos($transactionJson["status"], 'stalled') == true){
