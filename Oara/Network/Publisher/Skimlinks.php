@@ -191,7 +191,6 @@ class Skimlinks extends \Oara\Network
         $offset = 0;
 
         while (true) {
-
             $a_valuesFromExport = $valuesFromExport;
 
             array_push($a_valuesFromExport,
