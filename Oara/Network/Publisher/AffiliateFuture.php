@@ -22,7 +22,7 @@ namespace Oara\Network\Publisher;
 /**
  * Export Class
  *
- * @author     Carlos Morillo Merino
+ * @author     Carlos Morillo Merino - Updated by Paolo Nardini on 2019-Feb-05
  * @category   Af
  * @copyright  Fubra Limited
  * @version    Release: 01.00
@@ -32,6 +32,7 @@ class AffiliateFuture extends \Oara\Network
 {
 
     private $_client = null;
+    private $_api_credentials = [];
 
     /**
      * @param $credentials
@@ -49,22 +50,23 @@ class AffiliateFuture extends \Oara\Network
         );
 
         $urls = array();
-        $urls[] = new \Oara\Curl\Request('http://affiliates.affiliatefuture.com/login.aspx?', $valuesLogin);
+        $urls[] = new \Oara\Curl\Request('http://afuk.affiliate.affiliatefuture.co.uk/login.aspx?', $valuesLogin);
         $exportReport =  $this->_client->post($urls);
 
         $objDOM = new \DOMDocument();
         @$objDOM->loadHTML($exportReport[0]);
         $objXPath = new \DOMXPath($objDOM);
         $objInputs = $objXPath->query("//input[@type='hidden']");
+        // Get all session values needed to login
         foreach ($objInputs as $objInput) {
             $valuesLogin[] = new \Oara\Curl\Parameter($objInput->getAttribute('name'), $objInput->getAttribute('value'));
         }
+        // Now try again to log
         $urls = array();
-        $urls[] = new \Oara\Curl\Request('http://affiliates.affiliatefuture.com/login.aspx?', $valuesLogin);
+        $urls[] = new \Oara\Curl\Request('http://afuk.affiliate.affiliatefuture.co.uk/login.aspx?', $valuesLogin);
         $this->_client->post($urls);
 
         $this->_credentials = $credentials;
-
     }
 
     /**
@@ -95,14 +97,33 @@ class AffiliateFuture extends \Oara\Network
     public function checkConnection()
     {
         //If not login properly the construct launch an exception
-        $connection = true;
         $urls = array();
-        $urls[] = new \Oara\Curl\Request('http://affiliates.affiliatefuture.com/myaccount/invoices.aspx', array());
+        // $urls[] = new \Oara\Curl\Request('http://affiliates.affiliatefuture.com/myaccount/invoices.aspx', array());
+        $urls[] = new \Oara\Curl\Request('http://afuk.affiliate.affiliatefuture.co.uk/reporting/ReportingAPIs.aspx', array());
         $result = $this->_client->get($urls);
-        if (!\preg_match("/Logout/", $result[0], $matches)) {
-            $connection = false;
+
+        $this->_api_credentials = array();
+        $objDOM = new \DOMDocument();
+        @$objDOM->loadHTML($result[0]);
+        $objXPath = new \DOMXPath($objDOM);
+        $objInputs = $objXPath->query("//input[@type='text']");
+        if ($objInputs->length > 0) {
+            foreach ($objInputs as $objInput) {
+                $key = $objInput->getAttribute('name');
+                $value = $objInput->getAttribute('value');
+                if ($key == 'APIkey') {
+                    $key = 'key';
+                }
+                elseif ($key == 'APIpassword') {
+                    $key = 'passcode';
+                }
+                $this->_api_credentials[] = new \Oara\Curl\Parameter($key, $value);
+            }
         }
-        return $connection;
+        else {
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -116,6 +137,9 @@ class AffiliateFuture extends \Oara\Network
             $obj = Array();
             $obj['cid'] = $merchant['cid'];
             $obj['name'] = $merchant['name'];
+            $obj['description'] = $merchant['description'];
+            $obj['url'] = $merchant['url'];
+            $obj['joined'] = $merchant['joined'];
             $merchants[] = $obj;
         }
         return $merchants;
@@ -127,32 +151,54 @@ class AffiliateFuture extends \Oara\Network
     public function readMerchants()
     {
         $merchantList = array();
+
+        // STEP 1 - GET ALL MERCHANTS
+
+        $parameters = array_merge($this->_api_credentials, array(
+            new \Oara\Curl\Parameter('merchantsJoined', 'ALL'),
+            new \Oara\Curl\Parameter('newMerchants', 'NO')
+        ));
+
         $urls = array();
-        $urls[] = new \Oara\Curl\Request('http://affiliates.affiliatefuture.com/myprogrammes/default.aspx', array());
-        $exportReport = $this->_client->get($urls);
+        $urls[] = new \Oara\Curl\Request('https://api.affiliatefuture.com/PublisherService.svc/GetAFMerchantList?', $parameters);
+        $xmlReport = $this->_client->get($urls);
+        $xml = \simplexml_load_string($xmlReport[0], null, LIBXML_NOERROR | LIBXML_NOWARNING);
 
-        $doc = new \DOMDocument();
-        @$doc->loadHTML($exportReport[0]);
-        $xpath = new \DOMXPath($doc);
-        $results = $xpath->query('//table[@id="DataGrid1"]');
-
-        $merchantCsv = self::htmlToCsv(\Oara\Utilities::DOMinnerHTML($results->item(0)));
-
-        for ($i = 1; $i < \count($merchantCsv) - 1; $i++) {
-            $merchant = array();
-            $merchantLine = \str_getcsv($merchantCsv[$i], ";");
-            $merchant['name'] = $merchantLine[0];
-
-            $parseUrl = \parse_url($merchantLine[2]);
-            $parameters = \explode('&', $parseUrl['query']);
-            foreach ($parameters as $parameter) {
-                $parameterValue = \explode('=', $parameter);
-                if ($parameterValue[0] == 'id') {
-                    $merchant['cid'] = $parameterValue[1];
-                }
+        foreach($xml as $key => $value) {
+            if ($key == 'Merchant') {
+                $merchant = array();
+                $merchant['name'] = '' . $value->MerchantName;
+                $merchant['description'] = '' . $value->SiteDescription;
+                $merchant['cid'] = '' . $value->MerchantSiteId;
+                $merchant['url'] = '' . $value->SiteAddress;
+                $merchant['joined'] = '' . $value->MerchantJoined;
+                $merchantList[] = $merchant;
             }
-            $merchantList[] = $merchant;
         }
+
+        // STEP 2 GET ONLY NEW MERCHANTS
+        $parameters = array_merge($this->_api_credentials, array(
+            new \Oara\Curl\Parameter('merchantsJoined', 'ALL'),
+            new \Oara\Curl\Parameter('newMerchants', 'YES')
+        ));
+
+        $urls = array();
+        $urls[] = new \Oara\Curl\Request('https://api.affiliatefuture.com/PublisherService.svc/GetAFMerchantList?', $parameters);
+        $xmlReport = $this->_client->get($urls);
+        $xml = \simplexml_load_string($xmlReport[0], null, LIBXML_NOERROR | LIBXML_NOWARNING);
+
+        foreach($xml as $key => $value) {
+            if ($key == 'Merchant') {
+                $merchant = array();
+                $merchant['name'] = '' . $value->MerchantName;
+                $merchant['description'] = '' . $value->SiteDescription;
+                $merchant['cid'] = '' . $value->MerchantSiteId;
+                $merchant['url'] = '' . $value->SiteAddress;
+                $merchant['joined'] = '' . $value->MerchantJoined;
+                $merchantList[] = $merchant;
+            }
+        }
+
         return $merchantList;
     }
 
@@ -222,20 +268,18 @@ class AffiliateFuture extends \Oara\Network
         $dEndDate = clone $dEndDate;
         $dEndDate->setTime(23,59,59);
 
-
-        $valuesFromExport = array();
-        $valuesFromExport[] = new \Oara\Curl\Parameter('username', $this->_credentials["user"]);
-        $valuesFromExport[] = new \Oara\Curl\Parameter('password', $this->_credentials["password"]);
-        $valuesFromExport[] = new \Oara\Curl\Parameter('startDate', $dStartDate->format("d-M-Y"));
-        $valuesFromExport[] = new \Oara\Curl\Parameter('endDate', $dEndDate->format("d-M-Y"));
+        $parameters = array_merge($this->_api_credentials, array(
+            new \Oara\Curl\Parameter('startDate', $dStartDate->format("d-M-Y")),
+            new \Oara\Curl\Parameter('endDate', $dEndDate->format("d-M-Y"))
+        ));
 
         $transactions = Array();
         $urls = array();
-        $urls[] = new \Oara\Curl\Request('http://ws-external.afnt.co.uk/apiv1/AFFILIATES/affiliatefuture.asmx/GetTransactionListbyDate?', $valuesFromExport);
-        $urls[] = new \Oara\Curl\Request('http://ws-external.afnt.co.uk/apiv1/AFFILIATES/affiliatefuture.asmx/GetCancelledTransactionListbyDate?', $valuesFromExport);
-        $exportReport = $this->_client->get($urls);
+        $urls[] = new \Oara\Curl\Request('https://api.affiliatefuture.com/PublisherService.svc/GetTransactionListbyDate?', $parameters);
+        $urls[] = new \Oara\Curl\Request('https://api.affiliatefuture.com/PublisherService.svc/GetCancelledTransactionListbyDate?', $parameters);
+        $xmlReport = $this->_client->get($urls);
         for ($i = 0; $i < \count($urls); $i++) {
-            $xml = self::loadXml($exportReport[$i]);
+            $xml = \simplexml_load_string($xmlReport[$i], null, LIBXML_NOERROR | LIBXML_NOWARNING);
             if (isset($xml->error)) {
                 throw new \Exception('Error connecting with the server');
             }
@@ -243,11 +287,12 @@ class AffiliateFuture extends \Oara\Network
                 foreach ($xml->TransactionList as $transaction) {
                     $date = new \DateTime(self::findAttribute($transaction, 'TransactionDate'));
 
-                    if (isset($merchantIdMap[(int)self::findAttribute($transaction, 'ProgrammeID')]) &&
+                    if (count($merchantIdMap)== 0 || isset($merchantIdMap[(int)self::findAttribute($transaction, 'ProgrammeID')]) &&
                         ($date->format("Y-m-d H:i:s") >= $dStartDate->format("Y-m-d H:i:s")) &&
                         ($date->format("Y-m-d H:i:s") <= $dEndDate->format("Y-m-d H:i:s"))) {
 
                         $obj = Array();
+                        $obj['currency'] = 'GBP'; // Affiliate Future doesn't handle currencies, default is Pound!
                         $obj['merchantId'] = self::findAttribute($transaction, 'ProgrammeID');
                         $obj['date'] = $date->format("Y-m-d H:i:s");
                         if (self::findAttribute($transaction, 'TrackingReference') != null) {
@@ -255,17 +300,19 @@ class AffiliateFuture extends \Oara\Network
                         }
                         $obj['unique_id'] = self::findAttribute($transaction, 'TransactionID');
                         if ($i == 0) {
+                            // From FAQ: Merchants don’t validate sales. A merchant has 5 days after a sale has been made to cancel any invalid, fraudulent or cancelled transactions.
+                            // After this time has elapsed, the merchant can no longer cancel the transaction and the commission will be yours.
                             $interval = $date->diff($nowDate);
                             if ($interval->format('%a') > 5) {
                                 $obj['status'] = \Oara\Utilities::STATUS_CONFIRMED;
                             } else {
                                 $obj['status'] = \Oara\Utilities::STATUS_PENDING;
                             }
-                        } else
+                        } else {
                             if ($i == 1) {
                                 $obj['status'] = \Oara\Utilities::STATUS_DECLINED;
                             }
-
+                        }
                         $obj['amount'] = \Oara\Utilities::parseDouble(self::findAttribute($transaction, 'SaleValue'));
                         $obj['commission'] = \Oara\Utilities::parseDouble(self::findAttribute($transaction, 'SaleCommission'));
                         $leadCommission = \Oara\Utilities::parseDouble(self::findAttribute($transaction, 'LeadCommission'));
@@ -277,18 +324,7 @@ class AffiliateFuture extends \Oara\Network
                 }
             }
         }
-
         return $transactions;
-    }
-
-    /**
-     * @param null $exportReport
-     * @return \SimpleXMLElement
-     */
-    private function loadXml($exportReport = null)
-    {
-        $xml = \simplexml_load_string($exportReport, null, LIBXML_NOERROR | LIBXML_NOWARNING);
-        return $xml;
     }
 
     /**

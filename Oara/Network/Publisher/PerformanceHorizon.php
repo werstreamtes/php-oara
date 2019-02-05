@@ -22,7 +22,7 @@ namespace Oara\Network\Publisher;
 /**
  * Export Class
  *
- * @author     Carlos Morillo Merino
+ * @author     Carlos Morillo Merino - Updated by Paolo Nardini on 2019-Feb-04
  * @category   PerformanceHorizon
  * @copyright  Fubra Limited
  * @version    Release: 01.00
