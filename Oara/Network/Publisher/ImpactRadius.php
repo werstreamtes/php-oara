@@ -45,8 +45,15 @@ class ImpactRadius extends \Oara\Network
     public function login($credentials)
     {
         $this->_credentials = $credentials;
-        $this->_client = new \Oara\Curl\Access($credentials);
 
+        if (isset($this->_credentials['api-sid']) && isset($this->_credentials['api-token'])) {
+            // <slawn> - Allow passing sid+token with credentials
+            $this->_accountSid = $this->_credentials['api-sid'];
+            $this->_authToken = $this->_credentials['api-token'];
+            return;
+        }
+        // Compatibility fallback - try to simulate login to access token
+        $this->_client = new \Oara\Curl\Access($credentials);
         $user = $this->_credentials['user'];
         $password = $this->_credentials['password'];
         $loginUrl = 'https://app.impact.com/secure/login.user';
@@ -220,11 +227,18 @@ class ImpactRadius extends \Oara\Network
                     $transaction['merchant_id'] = (int)$action->CampaignId;
                     $transaction['merchant_name'] = (int)$action->CampaignName;
 
+
                     $transactionDate = \DateTime::createFromFormat("Y-m-d\TH:i:s", \substr((string)$action->EventDate,0,19));
                     $transaction['date'] = $transactionDate->format("Y-m-d H:i:s");
 
-                    $transactionDate = \DateTime::createFromFormat("Y-m-d\TH:i:s", \substr((string)$action->ReferringDate,0,19));
-                    $transaction['date_click'] = $transactionDate->format("Y-m-d H:i:s");
+                    if((string)$action->ReferringDate != ''){
+                        // <slawn>
+                        $transactionDate = \DateTime::createFromFormat("Y-m-d\TH:i:s", \substr((string)$action->ReferringDate,0,19));
+                        $transaction['date_click'] = $transactionDate->format("Y-m-d H:i:s");
+                    }
+                    else{
+                        $transaction['date_click'] = $transaction['date'];
+                    }
 
                     if ((string)$action->SharedId != '') {
                         $transaction['custom_id'] = (string)$action->SharedId;

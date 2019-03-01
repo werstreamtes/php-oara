@@ -38,8 +38,10 @@ class AffiliateWindow extends \Oara\Network
     private $_pageSize = 100;
     private $_currency = null;
     private $_userId = null;
+    private $_timeZone = "Europe/Berlin"; // <slawn>
     public $_sitesAllowed = array();
     public $_credentials = array();
+
     /**
      * @param $credentials
      * @throws \Exception
@@ -53,7 +55,7 @@ class AffiliateWindow extends \Oara\Network
 
         $this->_userId = $credentials['accountid'];
         $password = $credentials['apipassword'];
-
+        $this->_timeZone = (isset($credentials ['timeZone'])) ? $credentials ['timeZone'] : "Europe/Berlin";
         $this->_exportClient = new \Oara\Curl\Access($credentials);
     }
 
@@ -184,24 +186,20 @@ class AffiliateWindow extends \Oara\Network
      * @param \DateTime|null $dEndDate
      * @return array
      */
-    public function getTransactionList($merchantList = null, \DateTime $dStartDate = null, \DateTime $dEndDate = null, $timezone = 'Europe/Berlin')
+    public function getTransactionList($merchantList = null, \DateTime $dStartDate = null, \DateTime $dEndDate = null)
     {
         $totalTransactions = array();
 
         try {
             $id = $this->_credentials["accountid"];
             $pwd = $this->_credentials["apipassword"];
-            //echo "<br> id ".$id." pwd ".$pwd."<br>";
-
             $dStartDate_ = $dStartDate->format("Y-m-d");
-            //echo "<br>s date ".$dStartDate_;
-            $dStartTime_ = $dStartDate->format("H:s:i");
+            $dStartTime_ = "00:00:00";
             $dEndDate_ = $dEndDate->format("Y-m-d");
-            $dEndTime_ = $dEndDate->format("H:s:i");
+            $dEndTime_ = "23:59:59";
             $dEndDate = urlencode($dEndDate_ . "T" . $dEndTime_);
             $dStartDate = urlencode($dStartDate_ . "T" . $dStartTime_);
-            $timezone = urlencode($timezone);
-            //echo "<br>start date " . $dStartDate;
+            $timezone = urlencode($this->_timeZone);
             //$url = 'https://api.awin.com/publishers/'.$id.'/transactions/?accessToken='.$pwd.'&startDate=2017-02-20T00%3A00%3A00&endDate=2017-02-21T01%3A59%3A59&timezone=Europe/Berlin';
             $url = 'https://api.awin.com/publishers/' . $id . '/transactions/?accessToken=' . $pwd . '&startDate=' . $dStartDate . '&endDate=' . $dEndDate . '&timezone=' . $timezone;
             $result = \file_get_contents($url);
@@ -213,7 +211,44 @@ class AffiliateWindow extends \Oara\Network
             } else {
                 //echo "oara step3<br> ";
                 $content = \utf8_encode($result);
-                $totalTransactions = \json_decode($content);
+                $transactionObjectFull = \json_decode($content);
+                // <slawn> 2018-10-18
+                foreach($transactionObjectFull as $transactionObject){
+                    $transaction = Array();
+                    $transaction['unique_id'] = $transactionObject->id;
+                    $transaction['merchantId'] = $transactionObject->advertiserId;
+                    $date = new \DateTime($transactionObject->transactionDate);
+                    $transaction['date'] = $date->format("Y-m-d H:i:s");
+                    $transaction['custom_id'] = '';
+                    if (is_object($transactionObject->clickRefs)) {
+                        if (property_exists($transactionObject->clickRefs,'clickRef') && $transactionObject->clickRefs->clickRef != null && $transactionObject->clickRefs->clickRef != 0)
+                            $transaction['custom_id'] = $transactionObject->clickRefs->clickRef;
+                        else if (property_exists($transactionObject->clickRefs,'clickRef2') && $transactionObject->clickRefs->clickRef2 != null && $transactionObject->clickRefs->clickRef2 != 0)
+                            $transaction['custom_id'] = $transactionObject->clickRefs->clickRef2;
+                        else if (property_exists($transactionObject->clickRefs,'clickRef3') && $transactionObject->clickRefs->clickRef3 != null && $transactionObject->clickRefs->clickRef3 != 0)
+                            $$transaction['custom_id'] = $transactionObject->clickRefs->clickRef3;
+                        else if (property_exists($transactionObject->clickRefs,'clickRef4') && $transactionObject->clickRefs->clickRef4 != null && $transactionObject->clickRefs->clickRef4 != 0)
+                            $transaction['custom_id'] = $transactionObject->clickRefs->clickRef4;
+                        else if (property_exists($transactionObject->clickRefs,'clickRef5') && $transactionObject->clickRefs->clickRef5 != null && $transactionObject->clickRefs->clickRef5 != 0)
+                            $transaction['custom_id'] = $transactionObject->clickRefs->clickRef5;
+                        else if (property_exists($transactionObject->clickRefs,'clickRef6') && $transactionObject->clickRefs->clickRef6 != null && $transactionObject->clickRefs->clickRef6 != 0)
+                            $transaction['custom_id'] = $transactionObject->clickRefs->clickRef6;
+                    }
+                    $transaction['type'] = $transactionObject->type;
+                    $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
+                    if ($transactionObject->commissionStatus == 'approved') {
+                        $transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
+                    } else if ($transactionObject->commissionStatus == 'pending') {
+                        $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
+                    } else if ($transactionObject->commissionStatus == 'declined') {
+                        $transaction['status'] = \Oara\Utilities::STATUS_DECLINED;
+                    }
+                    $transaction['amount'] = \Oara\Utilities::parseDouble($transactionObject->saleAmount->amount);
+                    $transaction['commission'] = \Oara\Utilities::parseDouble($transactionObject->commissionAmount->amount);
+                    $transaction['currency'] = $transactionObject->commissionAmount->currency;
+
+                    $totalTransactions[] = $transaction;
+                }                
             }
         } catch (\Exception $e) {
             echo "oara step5 :".$e->getMessage()."\n ";
