@@ -35,15 +35,32 @@ class CommissionJunction extends \Oara\Network
     private $_accountId = null;
     private $_apiPassword = null;
     protected $_sitesAllowed = array ();
+    private $_requestor_cid = null;
+
+
+    /*
+     * ATTENTION - IMPORTANT UPDATES - 2019-03-22 by <PN>
+     * CJ REST API is now DEPRECATED and will be removed on June 1, 2019
+     * In the meanwhile, old functions calls using the previously generated DEVELOPER_KEYs in the header continue working,
+     * but for new created accounts you cannot generate a new developer key, but only a PERSONAL ACCESS TOKEN.
+     * REST API could use the Personal Access Tokens by sending it in the header as "Authorization: Bearer XXXXXXX ... "
+     * The api call need a NEW MANDATORY PARAMETER called "requestor-cid" that represent the COMPANY ID in the CJ account dashboard.
+     *
+     * CHANGES TO THIS CLASS:
+     * - $this->_website_id (not used) is now replaced by $this->_requestor_cid
+     * - If $credentials['id_site'] is passed to login() and it's not empty, it will be used in the Api function calls, and the
+     *   $credentials['apipassword'] will be used as a Personal Access Token and sent in header as "Authorization: Bearer xxxx..."
+     * - If $credentials['id_site'] is missing or empty, it will not be used, and the $credentials['apipassword'] will be
+     *   used as a Developer Key and sent in header as simple "Authorization: xxxx..."
+     */
 
     /**
      * @param $credentials
      */
     public function login($credentials)
     {
-        $this->_apiPassword = $credentials['apipassword'];
-
-        $this->_website_id = $credentials['id_site'];
+        $this->_apiPassword = @$credentials['apipassword'];
+        $this->_requestor_cid = @$credentials['id_site'];
     }
 
     /**
@@ -75,28 +92,6 @@ class CommissionJunction extends \Oara\Network
     {
         $connection = true;
 
-        /*$cookieMap = array();
-        $cookieContent = $this->_client->getCookies();
-        $cookieArray = \explode("\n", $cookieContent);
-        for ($i = 4; $i < \count($cookieArray); $i++) {
-            $cookieValue = \explode("\t", $cookieArray[$i]);
-            if (\count($cookieValue) == 7) {
-                $cookieMap[$cookieValue[\count($cookieValue) - 2]] = $cookieValue[\count($cookieValue) - 1];
-            }
-        }
-
-        if (isset($cookieMap["jsContactId"])) {
-            $this->_memberId = $cookieMap["jsContactId"];
-        } else {
-            return false;
-        }
-
-        if (isset($cookieMap["jsCompanyId"])) {
-            $this->_accountId = $cookieMap["jsCompanyId"];
-        } else {
-            return false;
-        }*/
-
         $result = self::apiCall('https://commission-detail.api.cj.com/v3/commissions?date-type=event');
         if ($result===false || \preg_match("/error/", $result)) {
             return false;
@@ -108,12 +103,34 @@ class CommissionJunction extends \Oara\Network
     private function apiCall($url)
     {
         $ch = curl_init();
+        if (!empty($this->_requestor_cid)) {
+            if (strpos($url, 'requestor-cid') === false) {
+                // 2019-03-22 <PN> see notes on top of this source
+                // Add cid parameter to url
+                $pos = strpos($url, '?');
+                if ($pos === false) {
+                    // The only parameter
+                    $url = $url . '?requestor-cid=' . $this->_requestor_cid;
+                }
+                else {
+                    // Prepend to first parameter
+                    $url = substr($url,0, $pos+1) . 'requestor-cid=' . $this->_requestor_cid . '&' . substr($url,$pos + 1);
+                }
+            }
+        }
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_POST, FALSE);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array("Authorization: " . $this->_apiPassword));
+        if (!empty($this->_requestor_cid)) {
+            // 2019-03-22 <PN> see notes on top of this source
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array("Authorization: Bearer " . $this->_apiPassword));
+        }
+        else {
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array("Authorization: " . $this->_apiPassword));
+        }
+
         $curl_results = curl_exec($ch);
         curl_close($ch);
         return $curl_results;
