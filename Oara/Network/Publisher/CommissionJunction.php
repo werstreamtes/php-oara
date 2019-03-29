@@ -392,8 +392,16 @@ class CommissionJunction extends \Oara\Network
         }
         else {
             if ($xml->count() > 0) {
-                foreach($xml->children() as $key => $value) {
-                    echo $key .  ": " . (string) $value . PHP_EOL;
+                if (isset($xml->title)) {
+                    echo "[ERROR][CJ] " . (string) $xml->title . PHP_EOL;
+                }
+                foreach($xml->children() as $child) {
+                    $key = $child->getName();
+                    $value = $child->attributes();
+                    echo "[WARNING][CJ] " . $key .  ": " . (string) $value . PHP_EOL;
+                    foreach ($child->children() AS $subkey => $value) {
+                        echo "[WARNING][CJ] " . $subkey .  ": " . (string) $value . PHP_EOL;
+                    }
                 }
             }
         }

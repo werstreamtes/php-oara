@@ -212,16 +212,20 @@ class WebGains extends \Oara\Network
 	        $curl_results = curl_exec($ch);
 	        curl_close($ch);
 	        $a_merchants = json_decode($curl_results, true);
-
-	        foreach ($a_merchants as $merchantJson) {
-		        $obj = Array();
-		        $obj['cid'] = $merchantJson["id"];
-		        $obj['name'] = $merchantJson["name"];
-		        $obj['status'] = $merchantJson["status"];
-		        $obj['url'] = $merchantJson["homepageURL"];
-		        $merchants[] = $obj;
-	        }
-
+            if (isset($a_merchants['code']) && $a_merchants['code'] == 401) {
+                echo "[error] Webgains Authentication Failed in get merchants";
+                return $merchants;
+            }
+            foreach ($a_merchants as $merchantJson) {
+                if (isset($merchantJson["id"])) {
+                    $obj = Array();
+                    $obj['cid'] = $merchantJson["id"];
+                    $obj['name'] = $merchantJson["name"];
+                    $obj['status'] = $merchantJson["status"];
+                    $obj['url'] = $merchantJson["homepageURL"];
+                    $merchants[] = $obj;
+                }
+            }
         }
         return $merchants;
     }

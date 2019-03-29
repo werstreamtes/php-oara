@@ -284,7 +284,7 @@ class LinkShare extends \Oara\Network
                 break;
             }
             if (empty($this->_sitesAllowed) || in_array($site->id, $this->_sitesAllowed)) {
-                echo "getting Transactions for site " . $site->id . "\n\n";
+                echo "LinkShare - Get Transactions for site " . $site->id . PHP_EOL;
 
                 // WARNING: You must create a custom report called exactly "Individual Item Report + Transaction ID + Currency"
                 // adding to the standard item report the columns "Transaction ID" and "Currency"
