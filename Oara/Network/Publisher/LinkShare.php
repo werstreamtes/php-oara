@@ -289,36 +289,10 @@ class LinkShare extends \Oara\Network
                 // WARNING: You must create a custom report called exactly "Individual Item Report + Transaction ID + Currency"
                 // adding to the standard item report the columns "Transaction ID" and "Currency"
                 $url = "https://ran-reporting.rakutenmarketing.com/en/reports/Individual-Item-Report-%2B-Transaction-ID-%2B-Currency/filters?start_date=" . $dStartDate->format("Y-m-d") . "&end_date=" . $dEndDate->format("Y-m-d") . "&include_summary=N" . "&network=" . $this->_nid . "&tz=GMT&date_type=transaction&token=" . urlencode($site->token);
-                $ch = curl_init();
-                curl_setopt($ch, CURLOPT_URL, $url);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 50);
-                curl_exec($ch);
-                $info = curl_getinfo($ch);
-                if ($info['http_code'] != 200) {
-                    return $totalTransactions;
-                } else {
-                    $result = file_get_contents($url);
-                }
-                curl_close($ch);
-                
+                $result = file_get_contents($url);
+
                 $url = "https://ran-reporting.rakutenmarketing.com/en/reports/signature-orders-report/filters?start_date=" . $dStartDate->format("Y-m-d") . "&end_date=" . $dEndDate->format("Y-m-d") . "&include_summary=N" . "&network=" . $this->_nid . "&tz=GMT&date_type=transaction&token=" . urlencode($site->token);
-                $ch = curl_init();
-                curl_setopt($ch, CURLOPT_URL, $url);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 50);
-                curl_exec($ch);
-                $info = curl_getinfo($ch);
-                if ($info['http_code'] != 200) {
-                    return $totalTransactions;
-                } else {
-                    $resultSignature = file_get_contents($url);
-                }
-                curl_close($ch);
+                $resultSignature = file_get_contents($url);
 
                 $signatureMap = array();
                 $exportData = str_getcsv($resultSignature, "\n");
@@ -327,7 +301,6 @@ class LinkShare extends \Oara\Network
                     $signatureData = str_getcsv($exportData [$j], ",");
                     $signatureMap[$signatureData[3]] = $signatureData[0];
                 }
-
 
                 $exportData = \str_getcsv($result, "\n");
                 $num = \count($exportData);
