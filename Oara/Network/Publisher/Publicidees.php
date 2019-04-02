@@ -94,16 +94,11 @@ class Publicidees extends \Oara\Network
      */
     public function checkConnection()
     {
-        $connection = true;
-/*
-        $urls = array();
-        $urls[] = new \Oara\Curl\Request('http://publisher.publicideas.com/', array());
-        $exportReport = $this->_client->get($urls);
-        if (\preg_match('/deconnexion\.php/', $exportReport[0], $matches)) {
-            $connection = true;
+        // Just check for valid credentiale
+        if (!empty($this->_user) && !empty($this->_password)) {
+            return true;
         }
-        */
-        return $connection;
+        return false;
     }
 
     /**
