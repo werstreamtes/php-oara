@@ -281,7 +281,9 @@ class Admitad extends \Oara\Network
 			$curl_results = curl_exec($ch);
 			curl_close($ch);
 			$coupons = json_decode($curl_results, true);
-
+            if (!is_array($coupons) || !isset($coupons['results'])) {
+                return $a_vouchers;
+            }
 			foreach ($coupons["results"] as $couponJson) {
 				$obj = Array();
 				$obj['promotionId'] = $couponJson["id"];
