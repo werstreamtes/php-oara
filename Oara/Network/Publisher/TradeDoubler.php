@@ -524,7 +524,7 @@ class TradeDoubler extends \Oara\Network
      */
     protected function toDate($dateString)
     {
-        $transactionDate = null;
+        $transactionDate = false;
         $hour_separator=':';
         if (strlen($dateString)>10){
             if (strpos(substr($dateString,10),'.')!==false){
@@ -535,7 +535,20 @@ class TradeDoubler extends \Oara\Network
             $transactionDate = \DateTime::createFromFormat("d/m/y H{$hour_separator}i{$hour_separator}s", \trim($dateString));
         } else
             if ($this->_dateFormat == 'M/d/yy') {
-                $transactionDate = \DateTime::createFromFormat("n/j/y H:i:s", \trim($dateString));
+                // Check for AM/PM time - 2019-04-15 <PN>
+                $transactionDate = \DateTime::createFromFormat("m/d/y h{$hour_separator}i{$hour_separator}s A", \trim($dateString));
+                if ($transactionDate === false) {
+                    // Check for H24 time
+                    $transactionDate = \DateTime::createFromFormat("m/d/y H{$hour_separator}i{$hour_separator}s", \trim($dateString));
+                }
+                if ($transactionDate === false) {
+                    // Try to get only the date
+                    $pos = strpos($dateString,' ');
+                    if ($pos !== false) {
+                        $dateString = substr($dateString, 0, $pos);
+                        $transactionDate = \DateTime::createFromFormat("m/d/y", trim($dateString));
+                    }
+                }
             } else
                 if ($this->_dateFormat == 'd/MM/yy') {
                     $transactionDate = \DateTime::createFromFormat("j/m/y H:i:s", \trim($dateString));
@@ -566,6 +579,9 @@ class TradeDoubler extends \Oara\Network
                                                 } else {
                                                     throw new \Exception("\n Date Format not supported " . $this->_dateFormat . "\n");
                                                 }
+        if ($transactionDate === false) {
+            throw new \Exception("TradeDoubler - Date Format not supported " . $this->_dateFormat . " for date: " . $dateString . "\n");
+        }
         return $transactionDate;
     }
 
