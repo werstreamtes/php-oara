@@ -1,6 +1,7 @@
 <?php
 namespace Oara\Network\Publisher;
-    use http\Exception\RuntimeException;
+
+use http\Exception\RuntimeException;
 
     /**
      * The goal of the Open Affiliate Report Aggregator (OARA) is to develop a set
@@ -24,9 +25,9 @@ namespace Oara\Network\Publisher;
 /**
  * Export Class
  *
- * @author     Carlos Morillo Merino
+ * @author     Paolo Nardini (based on class by Carlos Morillo Merino)
+ * @date       2019-05-05
  * @category   Cj
- * @copyright  Fubra Limited
  * @version    Release: 01.00
  *
  */
@@ -36,9 +37,10 @@ class CommissionJunctionGraphQL extends \Oara\Network
     private $_memberId = null;
     private $_accountId = null;
     private $_apiPassword = null;
-    protected $_sitesAllowed = array ();
     private $_requestor_cid = null;
     private $_connected = false;
+
+    protected $_sitesAllowed = array ();
 
     /*
      * ATTENTION - IMPORTANT UPDATES - 2019-05-05 by <PN>
@@ -140,39 +142,22 @@ class CommissionJunctionGraphQL extends \Oara\Network
     private function getMerchantExport()
     {
         $merchantReportList = array();
-        /*$valuesFromExport = array(new \Oara\Curl\Parameter('sortKey', 'active_start_date'),
-            new \Oara\Curl\Parameter('sortOrder', 'DESC'),
-            new \Oara\Curl\Parameter('contractView', 'ALL'),
-            new \Oara\Curl\Parameter('contractView', 'ALL'),
-            new \Oara\Curl\Parameter('format', '6'),
-            new \Oara\Curl\Parameter('contractState', 'active'),
-            new \Oara\Curl\Parameter('column', 'merchantid'),
-            new \Oara\Curl\Parameter('column', 'websitename'),
-            new \Oara\Curl\Parameter('column', 'merchantcategory')
-        );
-
-        $urls = array();
-        $urls[] = new \Oara\Curl\Request('https://members.cj.com/member/' . $this->_memberId . '/publisher/accounts/listmyadvertisers.do', array());
-        $exportReport = $this->_client->get($urls);
-
-        if (!preg_match('/Sorry, No Results Found\./', $exportReport[0], $matches)) {
-            $urls = array();
-            $urls[] = new \Oara\Curl\Request('https://members.cj.com/member/' . $this->_memberId . '/publisher/accounts/listmyadvertisers.do', $valuesFromExport);
-            $exportReport = $this->_client->post($urls);
-            $exportData = str_getcsv($exportReport[0], "\n");
-            $merchantReportList = Array();
-            $num = count($exportData);
-            for ($i = 1; $i < $num; $i++) {
-                $merchantExportArray = str_getcsv($exportData[$i], ",");
-                $merchantReportList[] = $merchantExportArray;
-            }
-        }*/
         $page=1;
         $per_page = 100;
         $total_pages = 99;
-        do{
+        $start = time();
+        $per_minute = 0;
+        do {
             if ($page > $total_pages){
                 exit;
+            }
+            if ($per_minute++ > 25 && (time() - $start) < 60) {
+                // Don't go above the 25 calls/minute
+                while ((time() - $start) < 60) {
+                    sleep(1);
+                }
+                $per_minute = 0;
+                $start = time();
             }
             // Get All programs even if not active - 2018-04-23 <PN>
             $response = self::apiCall('https://advertiser-lookup.api.cj.com/v3/advertiser-lookup?advertiser-ids=&records-per-page='.$per_page.'&page-number='.$page);
@@ -180,13 +165,15 @@ class CommissionJunctionGraphQL extends \Oara\Network
             if (!isset($xml->advertisers)) {
                 break;
             }
+            $total_adv = (int)$xml->advertisers[0]['total-matched'];
+            $total_pages = ceil($total_adv/$per_page);
 
-            $total_adv=(int)$xml->advertisers[0]['total-matched'];
-            $total_pages=ceil($total_adv/$per_page);
-            foreach ($xml->advertisers->advertiser as $adv){
+            foreach ($xml->advertisers->advertiser as $adv) {
+
                 $adv_id='';
                 $adv_name='';
-                foreach ($adv->children() AS $key=>$value){
+
+                foreach ($adv->children() AS $key=>$value) {
 
                     if ($key=='advertiser-id'){
                         $adv_id=(string)$value;
@@ -217,9 +204,8 @@ class CommissionJunctionGraphQL extends \Oara\Network
 
             }
             $page++;
-
-        }while($total_pages>=$page);
-
+        }
+        while($total_pages >= $page);
 
         return $merchantReportList;
     }
@@ -234,232 +220,166 @@ class CommissionJunctionGraphQL extends \Oara\Network
     public function getTransactionList($merchantList = null, \DateTime $dStartDate = null, \DateTime $dEndDate = null)
     {
         $totalTransactions = Array();
+        $byMerchant = false;
+
+        // Example of $merchantList parameter to filter only some merchants
+        /*
+        $merchantList = [
+            ['cid' => '1234567', 'name' => 'Merchant xyz'],
+            ['cid' => '7654321', 'name' => 'Merchant tzw']
+        ];
+        */
+
+
         if (!is_null($merchantList) && is_array($merchantList) && count($merchantList) > 0) {
-            $merchantIdArray = \array_keys(\Oara\Utilities::getMerchantIdMapFromMerchantList($merchantList));
-            $iteration = self::calculeIterationNumber(\count($merchantIdArray), '20');
+            $a_merchants = \array_keys(\Oara\Utilities::getMerchantIdMapFromMerchantList($merchantList));
             $byMerchant = true;
         }
+
+        if (!is_null($dStartDate) && !is_null($dEndDate)) {
+            $validDates = true;
+            $dStartDate->setTime(0, 0, 0, 0);
+            $dEndDate->setTime(0, 0, 0, 0);
+
+            $dStartDate->setTimezone(new \DateTimeZone('UTC'));
+            $sinceDateISO = $dStartDate->format(DATE_ISO8601);
+            $sinceDateISO = str_replace('+0000', 'Z', $sinceDateISO);
+            $beforeDateISO = ((clone $dEndDate)->add(new \DateInterval('P1D')))->setTimezone(new \DateTimeZone('UTC'))->format(DATE_ISO8601);
+            $beforeDateISO = str_replace('+0000', 'Z', $beforeDateISO);
+        }
         else {
-            $iteration = 1;
-            $byMerchant = false;
+            // Get default dates
+            $validDates = false;
         }
-        $dStartDate->setTime(0,0,0,0);
-        $dEndDate->setTime(0,0,0,0);
 
-        $dStartDate->setTimezone(new \DateTimeZone('UTC'));
-        $startDateISO = $dStartDate->format(DATE_ISO8601);
-        $startDateISO = str_replace('+0000','Z', $startDateISO);
-        $endDateISO = ((clone $dEndDate)->add(new \DateInterval('P1D')))->setTimezone(new \DateTimeZone('UTC'))->format(DATE_ISO8601);
-        $endDateISO = str_replace('+0000','Z', $endDateISO);
-
-        for ($it = 0; $it < $iteration; $it++) {
-            try {
-                if ($byMerchant) {
-                    // Only selected merchants
-                    $merchantSlice = \array_slice($merchantIdArray, $it * 20, 20);
-                    // $restUrl = 'https://commission-detail.api.cj.com/v3/commissions?cids=' . \implode(',', $merchantSlice) . '&date-type=posting&start-date=' . $dStartDate->format("Y-m-d") . '&end-date=' . $transactionDateEnd->format("Y-m-d");
-                }
-                else {
-                    // All merchants
-                    $query = '{ publisherCommissions(
-                        forPublishers: ["#cid#"], 
-                        sinceEventDate:"' . $startDateISO . '",
-                        beforeEventDate:"' . $endDateISO . '"
-                        )
-                        {
-                            count 
-                            payloadComplete 
-                            records {
-                                actionStatus actionTrackerId actionTrackerName actionType advertiserId  advertiserName aid clickDate clickReferringURL commissionId concludingBrowser concludingDeviceName concludingDeviceType country coupon eventDate initiatingBrowser initiatingDeviceName initiatingDeviceType	isCrossDevice lockingDate orderDiscountAdvCurrency orderDiscountOrigCurrency orderDiscountPubCurrency orderId original originalActionId postingDate pubCommissionAmountPubCurrency pubCommissionAmountUsd publisherId publisherName reviewedStatus saleAmountPubCurrency shopperId siteToStoreOffer situations source websiteId websiteName 
-                                items { 
-                                    commissionItemId discountAdvCurrency discountPubCurrency discountUsd itemListId perItemSaleAmountAdvCurrency perItemSaleAmountPubCurrency perItemSaleAmountUsd quantity situations sku totalCommissionAdvCurrency totalCommissionPubCurrency	totalCommissionUsd 
-                                }
-                            }
-                        }
-                    }';
-                }
-                $totalTransactions = \array_merge($totalTransactions, $this->getPublisherCommissions($query, $merchantList));
-            } catch (\Exception $e) {
-                $amountDays = $dStartDate->diff($dEndDate)->days;
-                $auxDate = clone $dStartDate;
-                for ($j = 0; $j < $amountDays; $j++) {
-                    $transactionDateEnd = clone $auxDate;
-                    $transactionDateEnd->add(new \DateInterval('P1D'));
-                    $restUrl = 'https://commission-detail.api.cj.com/v3/commissions?cids=' . \implode(',', $merchantSlice) . '&date-type=posting&start-date=' . $auxDate->format("Y-m-d") . '&end-date=' . $transactionDateEnd->format("Y-m-d");
-                    try {
-                        $totalTransactions = \array_merge($totalTransactions, self::getTransactionsXml($restUrl, $merchantList));
-                    } catch (\Exception $e) {
-                        $try = 0;
-                        $done = false;
-                        while (!$done && $try < 5) {
-                            try {
-                                $totalTransactions = \array_merge($totalTransactions, self::transactionsByType(\implode(',', $merchantSlice), $auxDate, $transactionDateEnd, $merchantList));
-                                $done = true;
-                            } catch (\Exception $e) {
-                                $try++;
-                                //echo "try again $try\n\n";
-                            }
-                        }
-                        if ($try == 5) {
-                            throw new \Exception("Couldn't get data from the Transaction");
-                        }
-                    }
-                    $auxDate->add(new \DateInterval('P1D'));
-                }
-            }
-        }
-        return $totalTransactions;
-    }
-
-    /**
-     * @param $query            GraphQL Query
-     * @param $merchantList
-     * @return array
-     */
-    private function getPublisherCommissions($query, $merchantList)
-    {
+        $payloadComplete = false;
+        $sinceCommissionId = null;
         $a_transactions = array();
-        $merchantIdList = \Oara\Utilities::getMerchantIdMapFromMerchantList($merchantList);
 
-        // Execute the GrapQL Query and get json response
-        $response = self::apiCall($query);
+        while(!$payloadComplete) {
 
-        if (isset($response->errors) && count($response->errors) > 0) {
-            $error_message = $response->errors[0]->message;
-            throw new \Exception("Error querying PublisherCommissions: " . $error_message);
-        }
-        if (isset($response->data)) {
-            $publisherCommissions = $response->data->publisherCommissions;
-            $count = $publisherCommissions->count;
-            $payloadComplete = $publisherCommissions->payloadComplete;
-            $records = $publisherCommissions->records;
-
-            if ($count == 0) {
-                return $a_transactions;
+            $query_header = 'publisherCommissions (forPublishers: ["#cid#"]';
+            if (!empty($sinceCommissionId)) {
+                // Get another data chunk
+                $query_header .= ',sinceCommissionId: "' . $sinceCommissionId . '"';
             }
-            for ($t=0; $t < $count; $t++) {
-                $record = $records[$t];
-
-                $transaction = Array();
-
-                $transaction ['unique_id'] = $record->aid;
-                $transaction ['action'] = $record->actionType;
-                $transaction['merchantId'] = $record->advertiserId;
-                //event-date - The associated event date for the item in UTC time zone.
-                $transactionDate = \DateTime::createFromFormat("Y-m-d\TH:i:sO", $record->eventDate);
-                $transaction['date'] = $transactionDate->format("Y-m-d H:i:sO");
-                $transaction['custom_id'] = '';
-                if (isset($record->shopperId)) {
-                    $transaction['custom_id'] = $record->shopperId;
+            if ($byMerchant) {
+                $query_header .= ',advertiserIds: [';
+                $separator = '';
+                foreach($a_merchants as $cid) {
+                    $query_header .= $separator . '"' . $cid . '"';
+                    $separator = ',';
                 }
-                $transaction ['amount'] = \Oara\Utilities::parseDouble($record->saleAmountPubCurrency);
-                $transaction ['commission'] = \Oara\Utilities::parseDouble($record->pubCommissionAmountPubCurrency);
+                $query_header .= ']';
+            }
+            if ($validDates) {
+                $query_header .= ',
+                    sinceEventDate:"' . $sinceDateISO . '",
+                    beforeEventDate:"' . $beforeDateISO . '"';
+            }
+            $query = '{' . $query_header . '){
+                count 
+                payloadComplete 
+                records {
+                    actionStatus actionTrackerId actionTrackerName actionType advertiserId advertiserName aid clickDate clickReferringURL commissionId concludingBrowser concludingDeviceName concludingDeviceType country coupon eventDate initiatingBrowser initiatingDeviceName initiatingDeviceType	isCrossDevice lockingDate orderDiscountAdvCurrency orderDiscountOrigCurrency orderDiscountPubCurrency orderId original originalActionId postingDate pubCommissionAmountPubCurrency pubCommissionAmountUsd publisherId publisherName reviewedStatus saleAmountPubCurrency shopperId siteToStoreOffer source websiteId websiteName 
+                    items {
+                        commissionItemId discountAdvCurrency discountPubCurrency discountUsd itemListId perItemSaleAmountAdvCurrency perItemSaleAmountPubCurrency perItemSaleAmountUsd quantity sku totalCommissionAdvCurrency totalCommissionPubCurrency totalCommissionUsd 
+                    }
+                }
+            }}';
 
+            // Execute the GrapQL Query and get json response
+            $response = self::grapQLApiCall($query);
 
-                if ($record->actionStatus == 'locked' || $record->actionStatus == 'closed') {
-                    $transaction ['status'] = \Oara\Utilities::STATUS_CONFIRMED;
-                } else if ($record->actionStatus == 'extended' || $record->actionStatus == 'new') {
-                    $transaction ['status'] = \Oara\Utilities::STATUS_PENDING;
-                } else if ($record->actionStatus == 'corrected') {
-                    $transaction ['status'] = \Oara\Utilities::STATUS_DECLINED;
+            if (isset($response->errors) && count($response->errors) > 0) {
+                $error_message = $response->errors[0]->message;
+                throw new \Exception("Error querying PublisherCommissions: " . $error_message);
+            }
+            if (isset($response->data)) {
+                $publisherCommissions = $response->data->publisherCommissions;
+                $count = $publisherCommissions->count;
+                $payloadComplete = $publisherCommissions->payloadComplete;
+                $sinceCommissionId = null;
+                if ($payloadComplete != true) {
+                    if (isset($publisherCommissions->maxCommissionId)) {
+                        // Incomplete data ... set cursor start for next chunk
+                        $sinceCommissionId = $publisherCommissions->maxCommissionId;
+                    }
+                }
+                $records = $publisherCommissions->records;
+
+                if ($count == 0) {
+                    return $a_transactions;
                 }
 
-                if ($transaction ['commission'] == 0) {
-                    $transaction ['status'] = \Oara\Utilities::STATUS_PENDING;
-                }
+                // Scan records and get attributes
+                for ($t = 0; $t < $count; $t++) {
+                    $record = $records[$t];
 
-                /*
-                // Negative commission must be subtracted by original commission identified by the same 'original-action-id' field - 2018-07-13 <PN>
-                // Only if result is zero the commission could be set DECLINED. This logic must be implemented by the caller!
-                if ($transaction ['amount'] < 0 || $transaction ['commission'] < 0) {
-                    $transaction ['status'] = \Oara\Utilities::STATUS_DECLINED;
-                    $transaction ['amount'] = \abs($transaction ['amount']);
-                    $transaction ['commission'] = \abs($transaction ['commission']);
+                    $transaction = Array();
+
+                    $transaction ['unique_id'] = $record->aid;
+                    $transaction ['action'] = $record->actionType;
+                    $transaction['merchantId'] = $record->advertiserId;
+                    //event-date - The associated event date for the item in UTC time zone.
+                    $transactionDate = \DateTime::createFromFormat("Y-m-d\TH:i:sO", $record->eventDate);
+                    $transaction['date'] = $transactionDate->format("Y-m-d H:i:sO");
+                    $transaction['custom_id'] = '';
+                    if (isset($record->shopperId)) {
+                        $transaction['custom_id'] = $record->shopperId;
+                    }
+                    $transaction ['amount'] = \Oara\Utilities::parseDouble($record->saleAmountPubCurrency);
+                    $transaction ['commission'] = \Oara\Utilities::parseDouble($record->pubCommissionAmountPubCurrency);
+
+                    if ($record->actionStatus == 'locked' || $record->actionStatus == 'closed') {
+                        $transaction ['status'] = \Oara\Utilities::STATUS_CONFIRMED;
+                    } else if ($record->actionStatus == 'extended' || $record->actionStatus == 'new') {
+                        $transaction ['status'] = \Oara\Utilities::STATUS_PENDING;
+                    } else if ($record->actionStatus == 'corrected') {
+                        $transaction ['status'] = \Oara\Utilities::STATUS_DECLINED;
+                    }
+
+                    if ($transaction ['commission'] == 0) {
+                        $transaction ['status'] = \Oara\Utilities::STATUS_PENDING;
+                    }
+
+                    /*
+                    // Negative commission must be subtracted by original commission identified by the same 'original-action-id' field - 2018-07-13 <PN>
+                    // Only if result is zero the commission could be set DECLINED. This logic must be implemented by the caller!
+                    if ($transaction ['amount'] < 0 || $transaction ['commission'] < 0) {
+                        $transaction ['status'] = \Oara\Utilities::STATUS_DECLINED;
+                        $transaction ['amount'] = \abs($transaction ['amount']);
+                        $transaction ['commission'] = \abs($transaction ['commission']);
+                    }
+                    */
+                    $transaction ['aid'] = $record->aid;
+                    $transaction ['order-id'] = $record->orderId;
+                    $transaction ['original'] = ($record->original === 'true');
+                    // 'original-action-id' is used as reference field between original commission and adjust/correction commission - 2018-07-13 <PN>
+                    $transaction ['original-action-id'] = $record->originalActionId;
+
+                    // Add new record to return array
+                    $a_transactions[] = $transaction;
                 }
-                */
-                $transaction ['aid'] = $record->aid;
-                $transaction ['order-id'] = $record->orderId;
-                $transaction ['original'] = ($record->original === 'true');
-                // 'original-action-id' is used as reference field between original commission and adjust/correction commission - 2018-07-13 <PN>
-                $transaction ['original-action-id'] = $record->originalActionId;
-                
-                // Add new record to return array
-                $a_transactions[] = $transaction;
+            } else {
+                $payloadComplete = true;
             }
         }
         return $a_transactions;
-
-/*        
-        $xml = \simplexml_load_string($response, null, LIBXML_NOERROR | LIBXML_NOWARNING);
-        if (isset($xml->commissions->commission)) {
-            foreach ($xml->commissions->commission as $singleTransaction) {
-
-                if (\count($this->_sitesAllowed) == 0 || \in_array(( int )self::findAttribute($singleTransaction, 'website-id'), $this->_sitesAllowed)) {
-
-                    if (count($merchantIdList) == 0 || isset($merchantIdList[(int)self::findAttribute($singleTransaction, 'cid')])) {
-
-                        $transaction = Array();
-                        $transaction ['unique_id'] = self::findAttribute($singleTransaction, 'commission-id');//self::findAttribute($singleTransaction, 'original-action-id');
-                        $transaction ['action'] = self::findAttribute($singleTransaction, 'action-type');
-                        $transaction['merchantId'] = self::findAttribute($singleTransaction, 'cid');
-                        //event-date - The associated event date for the item in UTC time zone.
-                        $transactionDate = \DateTime::createFromFormat("Y-m-d\TH:i:sO", (self::findAttribute($singleTransaction, 'event-date')));
-                        $transaction['date'] = $transactionDate->format("Y-m-d H:i:sO");
-                        $transaction['custom_id'] = '';
-                        if (self::findAttribute($singleTransaction, 'sid') != null) {
-                            $transaction['custom_id'] = self::findAttribute($singleTransaction, 'sid');
-                        }
-
-                        $transaction ['amount'] = \Oara\Utilities::parseDouble(self::findAttribute($singleTransaction, 'sale-amount'));
-                        $transaction ['commission'] = \Oara\Utilities::parseDouble(self::findAttribute($singleTransaction, 'commission-amount'));
-
-                        if (self::findAttribute($singleTransaction, 'action-status') == 'locked' || self::findAttribute($singleTransaction, 'action-status') == 'closed') {
-                            $transaction ['status'] = \Oara\Utilities::STATUS_CONFIRMED;
-                        } else if (self::findAttribute($singleTransaction, 'action-status') == 'extended' || self::findAttribute($singleTransaction, 'action-status') == 'new') {
-                            $transaction ['status'] = \Oara\Utilities::STATUS_PENDING;
-                        } else if (self::findAttribute($singleTransaction, 'action-status') == 'corrected') {
-                            $transaction ['status'] = \Oara\Utilities::STATUS_DECLINED;
-                        }
-
-                        if ($transaction ['commission'] == 0) {
-                            $transaction ['status'] = \Oara\Utilities::STATUS_PENDING;
-                        }
-
-                        $transaction ['aid'] = self::findAttribute($singleTransaction, 'aid');
-                        $transaction ['order-id'] = self::findAttribute($singleTransaction, 'order-id');
-                        $transaction ['original'] = (self::findAttribute($singleTransaction, 'original') === 'true');
-                        // 'original-action-id' is used as reference field between original commission and adjust/correction commission - 2018-07-13 <PN>
-                        $transaction ['original-action-id'] = self::findAttribute($singleTransaction, 'original-action-id');
-                        $totalTransactions[] = $transaction;
-                    }
-                }
-            }
-        }
-        else {
-            if ($xml->count() > 0) {
-                if (isset($xml->title)) {
-                    echo "[ERROR][CJ] " . (string) $xml->title . PHP_EOL;
-                }
-                foreach($xml->children() as $child) {
-                    $key = $child->getName();
-                    $value = $child->attributes();
-                    echo "[WARNING][CJ] " . $key .  ": " . (string) $value . PHP_EOL;
-                    foreach ($child->children() AS $subkey => $value) {
-                        echo "[WARNING][CJ] " . $subkey .  ": " . (string) $value . PHP_EOL;
-                    }
-                }
-            }
-        }
-        return $totalTransactions;
-*/
     }
 
-    private function apiCall(string $query)
+    /**
+     * Execute e GrapQL API call and return json results
+     * @param string $query
+     * @return mixed
+     */
+    private function grapQLApiCall(string $query)
     {
         $url = "https://commissions.api.cj.com/query";
         $ch = curl_init();
 
         if (stripos($query, '#cid#') !== false) {
+            // Replace placeholder with requestor cid
             $query = str_ireplace('#cid#', $this->_requestor_cid, $query);
         }
 
@@ -477,49 +397,48 @@ class CommissionJunctionGraphQL extends \Oara\Network
     }
 
     /**
-     * @param $rowAvailable
-     * @param $rowsReturned
-     * @return int
+     * API Rest call
+     * @param $url
+     * @return bool|string
      */
-    private function calculeIterationNumber($rowAvailable, $rowsReturned)
+    private function apiCall($url)
     {
-        $iterationDouble = (double)($rowAvailable / $rowsReturned);
-        $iterationInt = (int)($rowAvailable / $rowsReturned);
-        if ($iterationDouble > $iterationInt) {
-            $iterationInt++;
+        $ch = curl_init();
+        if (!empty($this->_requestor_cid)) {
+            if (strpos($url, 'requestor-cid') === false) {
+                /**
+                 * 2019-03-22 <PN>
+                 * For new created accounts you cannot generate a new developer key, but only a PERSONAL ACCESS TOKEN.
+                 * REST API could use the Personal Access Tokens by sending it in the header as "Authorization: Bearer XXXXXXX ... "
+                 * The api call need a NEW MANDATORY PARAMETER called "requestor-cid" that represent the COMPANY ID in the CJ account dashboard.
+                 */
+                // Add cid parameter to url
+                $pos = strpos($url, '?');
+                if ($pos === false) {
+                    // The only parameter
+                    $url = $url . '?requestor-cid=' . $this->_requestor_cid;
+                }
+                else {
+                    // Prepend to first parameter
+                    $url = substr($url,0, $pos+1) . 'requestor-cid=' . $this->_requestor_cid . '&' . substr($url,$pos + 1);
+                }
+            }
         }
-        return $iterationInt;
-    }
-
-
-    /**
-     * @param null $object
-     * @param null $attribute
-     * @return null|string
-     */
-    private function findAttribute($object = null, $attribute = null)
-    {
-        $return = null;
-        $return = \trim($object->$attribute);
-        return $return;
-    }
-
-    /**
-     * @param $cid
-     * @param $startDate
-     * @param $endDate
-     * @param $merchantList
-     * @return array
-     */
-    private function transactionsByType($cid, $startDate, $endDate, $merchantList)
-    {
-        $totalTransactions = array();
-        $typeTransactions = array("bonus", "click", "impression", "sale", "lead", "advanced%20sale", "advanced%20lead", "performance%20incentive");
-        foreach ($typeTransactions as $type) {
-            $restUrl = 'https://commission-detail.api.cj.com/v3/commissions?action-types=' . $type . '&cids=' . $cid . '&date-type=posting&start-date=' . $startDate->format("Y-m-d") . '&end-date=' . $endDate->format("Y-m-d");
-            $totalTransactions = \array_merge($totalTransactions, self::getTransactionsXml($restUrl, $merchantList));
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_POST, FALSE);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+        if (!empty($this->_requestor_cid)) {
+            // 2019-03-22 <PN> see notes above
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array("Authorization: Bearer " . $this->_apiPassword));
         }
-        return $totalTransactions;
+        else {
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array("Authorization: " . $this->_apiPassword));
+        }
+        $curl_results = curl_exec($ch);
+        curl_close($ch);
+        return $curl_results;
     }
 
     /**
