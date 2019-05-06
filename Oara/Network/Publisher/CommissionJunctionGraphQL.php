@@ -106,7 +106,7 @@ class CommissionJunctionGraphQL extends \Oara\Network
         // Get only commission counts to check for a valid connection
         $query = '{ publisherCommissions(forPublishers: ["#cid#"]){count} }';
 
-        $result = self::apiCall($query);
+        $result = self::grapQLApiCall($query);
         if (isset($result->errors) && count($result->errors) > 0) {
             $error_message = $result->errors[0]->message;
             $this->_connected = false;
