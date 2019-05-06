@@ -318,7 +318,7 @@ class CommissionJunctionGraphQL extends \Oara\Network
 
                     $transaction = Array();
 
-                    $transaction ['unique_id'] = $record->aid;
+                    $transaction ['unique_id'] = $record->commissionId;
                     $transaction ['action'] = $record->actionType;
                     $transaction['merchantId'] = $record->advertiserId;
                     //event-date - The associated event date for the item in UTC time zone.
@@ -354,7 +354,7 @@ class CommissionJunctionGraphQL extends \Oara\Network
                     */
                     $transaction ['aid'] = $record->aid;
                     $transaction ['order-id'] = $record->orderId;
-                    $transaction ['original'] = ($record->original === 'true');
+                    $transaction ['original'] = ($record->original == true);
                     // 'original-action-id' is used as reference field between original commission and adjust/correction commission - 2018-07-13 <PN>
                     $transaction ['original-action-id'] = $record->originalActionId;
 
