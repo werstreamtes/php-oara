@@ -226,7 +226,7 @@ class AffiliateWindow extends \Oara\Network
                         else if (property_exists($transactionObject->clickRefs,'clickRef2') && $transactionObject->clickRefs->clickRef2 != null && $transactionObject->clickRefs->clickRef2 != 0)
                             $transaction['custom_id'] = $transactionObject->clickRefs->clickRef2;
                         else if (property_exists($transactionObject->clickRefs,'clickRef3') && $transactionObject->clickRefs->clickRef3 != null && $transactionObject->clickRefs->clickRef3 != 0)
-                            $$transaction['custom_id'] = $transactionObject->clickRefs->clickRef3;
+                            $transaction['custom_id'] = $transactionObject->clickRefs->clickRef3;
                         else if (property_exists($transactionObject->clickRefs,'clickRef4') && $transactionObject->clickRefs->clickRef4 != null && $transactionObject->clickRefs->clickRef4 != 0)
                             $transaction['custom_id'] = $transactionObject->clickRefs->clickRef4;
                         else if (property_exists($transactionObject->clickRefs,'clickRef5') && $transactionObject->clickRefs->clickRef5 != null && $transactionObject->clickRefs->clickRef5 != 0)
