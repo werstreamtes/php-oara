@@ -45,54 +45,11 @@ class NetAffiliation extends \Oara\Network
 
         $this->_credentials = $credentials;
         $this->_client = new \Oara\Curl\Access($credentials);
-
-        $user = $credentials['user'];
-        $password = $credentials['password'];
-        $loginUrl = "https://www6.netaffiliation.com/login";
-
-        $valuesLogin = array(new \Oara\Curl\Parameter('login[from]', 'Accueil/index'),
-            new \Oara\Curl\Parameter('login[email]', $user),
-            new \Oara\Curl\Parameter('login[mdp]', $password)
-        );
-        $urls = array();
-        $urls[] = new \Oara\Curl\Request($loginUrl, $valuesLogin);
-        $this->_client->post($urls);
-
-        $cookieContent = $this->_client->getCookies();
-        $serverNumber = null;
-        if (\preg_match('/www(.)\.netaffiliation\.com/', $cookieContent, $matches)) {
-            $this->_serverNumber = $matches[1];
-        }
-
-        $urls = array();
-        $valuesFormExport = array();
-        $urls[] = new \Oara\Curl\Request('http://www' . $this->_serverNumber . '.netaffiliation.com/affiliate/webservice', $valuesFormExport);
-        $exportReport = $this->_client->get($urls);
-
-        $doc = new \DOMDocument();
-        @$doc->loadHTML($exportReport[0]);
-        $xpath = new \DOMXPath($doc);
-        $results = $xpath->query('//*[contains(concat(" ", normalize-space(@class), " "), " margeHaut5 ")]');
-
-        foreach ($results as $result) {
-            $this->_credentials["apiPassword"] = $result->nodeValue;
-        }
-        if (!isset($this->_credentials["apiPassword"])) {
-            $valuesFormExport = array();
-            $urls[] = new \Oara\Curl\Request('http://www' . $this->_serverNumber . '.netaffiliation.com/affiliate/webservice?d=1', $valuesFormExport);
-            $this->_client->get($urls);
-        }
-        $urls = array();
-        $valuesFormExport = array();
-        $urls[] = new \Oara\Curl\Request('http://www' . $this->_serverNumber . '.netaffiliation.com/affiliate/webservice', $valuesFormExport);
-        $exportReport = $this->_client->get($urls);
-        $doc = new \DOMDocument();
-        @$doc->loadHTML($exportReport[0]);
-        $xpath = new \DOMXPath($doc);
-        $results = $xpath->query('//*[contains(concat(" ", normalize-space(@class), " "), " margeHaut5 ")]');
-        foreach ($results as $result) {
-            $this->_credentials["apiPassword"] = $result->nodeValue;
-        }
+	    /**
+	     * 2019-06-10
+	     * Login page changed: Scraping is not possible anymore, API password must be passed from outside.
+	     */
+        $this->_credentials["apiPassword"] = $credentials['password'];
 
     }
 
@@ -123,16 +80,28 @@ class NetAffiliation extends \Oara\Network
      */
     public function checkConnection()
     {
-        $connection = true;
-        //Checking connection to the platform
-        $valuesFormExport = array();
-        $urls = array();
-        $urls[] = new \Oara\Curl\Request('http://www' . $this->_serverNumber . '.netaffiliation.com/index.php/', $valuesFormExport);
-        $exportReport = $this->_client->get($urls);
-        if (!\preg_match("/logout/", $exportReport[0], $matches) || !isset($this->_credentials["apiPassword"])) {
-            $connection = false;
-        }
-        return $connection;
+	    /**
+	     * 2019-06-10
+	     * Check credentials by requiring an empty report
+	     * Successful query : « OK » string followed by a space and the number of lines recovered. A query can be successful and still not return any lines, just OK 0.
+	     * Failed query : « KO » string followed by a space and an error number, followed by a space and an explanation « humanly comprehensible ».
+	     *
+	     * ref. to http://wiki.netaffiliation.com/doku.php/en/diffuseurs/outils-techniques/webservices
+	     */
+	    $valuesFormExport = array();
+	    $valuesFormExport[] = new \Oara\Curl\Parameter('authl', $this->_credentials["user"]);
+	    $valuesFormExport[] = new \Oara\Curl\Parameter('authv', $this->_credentials["apiPassword"]);
+	    $urls = array();
+	    $urls[] = new \Oara\Curl\Request('https://stat.netaffiliation.com/requete.php?', $valuesFormExport);
+	    $exportReport = $this->_client->get($urls);
+		if (is_array($exportReport) && isset($exportReport[0])){
+
+			if (substr($exportReport[0], 0, 2) == 'OK'){
+				return true;
+			}
+		}
+	    return false;
+
     }
 
     /**
