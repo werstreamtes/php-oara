@@ -244,7 +244,7 @@ class Digidip extends \Oara\Network
 	    $transaction['merchantId'] = $transactionJson['merchant']['id'];
 	    $transaction['merchantName'] = $transactionJson['merchant']['name'];
 	    $transaction['date'] = $transactionJson['date']['iso8601'];
-	    $transaction['click_date'] = $transactionJson['click']['date']['iso8601'];
+	    $transaction['click_date'] = $transactionJson['click']['date']['iso8601'] ?? null;
 	    $transaction['update_date'] = $transactionJson['last_modified_date']['iso8601'] ?? null;
 	    $transaction['amount'] = \Oara\Utilities::parseDouble($transactionJson['price']['amount']);
 	    $transaction['commission'] = \Oara\Utilities::parseDouble($transactionJson['commission']['amount']);
