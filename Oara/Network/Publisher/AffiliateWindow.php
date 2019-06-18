@@ -195,8 +195,13 @@ class AffiliateWindow extends \Oara\Network
             $pwd = $this->_credentials["apipassword"];
             $dStartDate_ = $dStartDate->format("Y-m-d");
             $dStartTime_ = "00:00:00";
-            $dEndDate_ = $dEndDate->format("Y-m-d");
-            $dEndTime_ = "23:59:59";
+	        $dEndDate_ = $dEndDate->format("Y-m-d");
+	        if ($dEndDate_ == date("Y-m-d")){
+		        $dEndTime_ = date("H:i:s");
+	        }
+	        else{
+		        $dEndTime_ = "23:59:59";
+	        }
             $dEndDate = urlencode($dEndDate_ . "T" . $dEndTime_);
             $dStartDate = urlencode($dStartDate_ . "T" . $dStartTime_);
             $timezone = urlencode($this->_timeZone);
