@@ -139,14 +139,20 @@ class AffiliNet extends \Oara\Network
 
         while ($voucherRead < $totalResults && $currentPage < 9) {
             $voucherList = self::affilinetCall('voucher', $publisherInboxService, $params, 0, $currentPage);
-            $totalResults = $voucherList->TotalResults;
-            $vouchers = $voucherList->VoucherCodeCollection->VoucherCodeItem;
-            $voucherRead += count($vouchers);
-            $currentPage++;
+            if (isset($voucherList->TotalResults) && isset($voucherList->VoucherCodeCollection) && isset($voucherList->VoucherCodeCollection->VoucherCodeItem)){
+	            $totalResults = $voucherList->TotalResults;
+	            $vouchers = $voucherList->VoucherCodeCollection->VoucherCodeItem;
+	            $voucherRead += count($vouchers);
+	            $currentPage++;
 
-            foreach($vouchers as $voucherItem) {
-                $vouchersListResult[] = $voucherItem;
+	            foreach($vouchers as $voucherItem) {
+		            $vouchersListResult[] = $voucherItem;
+	            }
             }
+            else{
+	            return $vouchersListResult;
+            }
+
         }
         return $vouchersListResult;
     }
