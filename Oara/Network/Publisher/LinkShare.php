@@ -241,7 +241,7 @@ class LinkShare extends \Oara\Network
             $urls [] = new \Oara\Curl\Request ('http://cli.linksynergy.com/cli/publisher/programs/carDownload.php', array());
             $result = $this->_client->get($urls);
 
-            $exportData = \explode(",\n", $result [0]);
+            $exportData = \explode("\n", $result [0]);
 
             $num = \count($exportData);
             for ($i = 1; $i < $num - 1; $i++) {
@@ -365,19 +365,27 @@ class LinkShare extends \Oara\Network
 
             // https://api.rakutenmarketing.com/coupon/1.0?category=16&promotiontype=31&network=1&resultsperpage=100&pagenumber=2
 
+            
             $loginUrl = "https://api.rakutenmarketing.com/coupon/1.0";
             $currentPage = 1;
             $arrResult = array();
-
+            if (strpos($network,',') !== false) {
+                // If more than one networks are provided ... don't use network parameter to get ALL networks - 2019-06-24 <PN>
+                $network = null;
+            }
             while (true) {
                 $params = array(
                     // Optional parameters category / promotiontype
                     // new \Oara\Curl\Parameter('category', '1|2|3|4|5|6|7|8'),
                     // new \Oara\Curl\Parameter('promotiontype', 31),
-                    new \Oara\Curl\Parameter('network', $network),
+                    // new \Oara\Curl\Parameter('network', $network),
                     new \Oara\Curl\Parameter('resultsperpage', 100),
                     new \Oara\Curl\Parameter('pagenumber', $currentPage)
                 );
+                if (!empty($network) && $network == intval($network)) {
+                    // Add network parameter only if a unique valid integer value
+                    $params[] = new \Oara\Curl\Parameter('network', $network);
+                }
 
                 $p = array();
                 foreach ($params as $parameter) {
@@ -399,6 +407,12 @@ class LinkShare extends \Oara\Network
                 $response = xml2array($curl_results);
                 if (!is_array($response) || count($response) <= 0) {
                     return $arrResult;
+                }
+                if (!isset($response['couponfeed'])) {
+                    if (isset($response['ams:fault'])) {
+                        $message = 'Linkshare: ' . $response['ams:fault']['ams:message'] . ' - ' . $response['ams:fault']['ams:description'];
+                        throw new \Exception($message);
+                    }
                 }
                 $couponfeed = $response['couponfeed'];
                 $totalMatches = $couponfeed['TotalMatches'];
