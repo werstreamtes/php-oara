@@ -125,8 +125,8 @@ class Digidip extends \Oara\Network
 					$transactions = "https://api.digidip.net/detailed-transactions";
 					$params = array(
 						new \Oara\Curl\Parameter('project_id',  $id_site),
-						new \Oara\Curl\Parameter('timestamp_start',  $dStartDate->timestamp),
-						new \Oara\Curl\Parameter('timestamp_end', $dEndDate->timestamp),
+						new \Oara\Curl\Parameter('timestamp_start',  $dStartDate->getTimestamp()),
+						new \Oara\Curl\Parameter('timestamp_end', $dEndDate->getTimestamp()),
 						new \Oara\Curl\Parameter('page', $page),
 					);
 

@@ -239,27 +239,29 @@ class LinkShare extends \Oara\Network
 
             $urls = array();
             $urls [] = new \Oara\Curl\Request ('http://cli.linksynergy.com/cli/publisher/programs/carDownload.php', array());
-            $result = $this->_client->get($urls);
 
-            $exportData = \explode("\n", $result [0]);
-
-            $num = \count($exportData);
+            $a_result = $this->_client->get($urls);
+            if (!is_array($a_result) || count($a_result) == 0) {
+                throw (new \Exception("[LinkShare] Error getting merchants"));
+            }
+            $exportData = explode("\"\n", $a_result[0]);
+            $num = count($exportData);
             for ($i = 1; $i < $num - 1; $i++) {
-                $merchantArray = \str_getcsv($exportData [$i], ",", '"');
-                if (!\in_array($merchantArray [2], $merchantIdMap)) {
+                $merchantArray = str_getcsv($exportData [$i], ",", '"');
+                if (count($merchantArray) < 22) {
+                    // Invalid row... skip
+                    continue;
+                }
+                if (!in_array($merchantArray [2], $merchantIdMap)) {
                     $obj = Array();
-                    if (!isset ($merchantArray [2])) {
-                        throw new \Exception ("Error getting merchants");
-                    }
                     $obj['cid'] = ( int )$merchantArray[2];
                     $obj['name'] = $merchantArray[0];
-                    $obj['description'] = $merchantArray[3];
+                    $obj['description'] = str_replace("\r\n", " ", $merchantArray[3]);
                     $obj['url'] = $merchantArray[1];
                     $obj['status'] = $merchantArray[7];
                     $obj['termination_date'] = $merchantArray[21];
-
-                    $merchants [] = $obj;
-                    $merchantIdMap [] = $obj ['cid'];
+                    $merchants[] = $obj;
+                    $merchantIdMap[] = $obj['cid'];
                 }
             }
         }
