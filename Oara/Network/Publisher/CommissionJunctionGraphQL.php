@@ -317,9 +317,31 @@ class CommissionJunctionGraphQL extends \Oara\Network
                     $record = $records[$t];
 
                     $transaction = Array();
+					$transaction['unique_id'] = $record->commissionId;
+	                /**
+	                 * Ref. to https://developers.cj.com/graphql/reference/Commission%20Detail
+	                 * ActionType possible values: bonus, click, imp, item_lead, item_sale, perf_inc, sim_lead, sim_sale
+	                 */
+	                $transaction['action'] = $record->actionType;
+	                if ($record->actionType == 'bonus') {
+		                $transaction['action'] = \Oara\Utilities::TYPE_BONUS;
+	                }
+	                else if ($record->actionType == 'item_sale' || $record->actionType == 'sim_sale') {
+		                $transaction['action'] = \Oara\Utilities::TYPE_SALE;
+	                }
+	                else if ($record->actionType == 'sim_lead' || $record->actionType == 'item_lead') {
+		                $transaction['action'] = \Oara\Utilities::TYPE_LEAD;
+	                }
+	                else if ($record->actionType == 'click') {
+		                $transaction['action'] = \Oara\Utilities::TYPE_CLICK;
+	                }
+	                else if ($record->actionType == 'imp') {
+		                $transaction['action'] = \Oara\Utilities::TYPE_IMPRESSION;
+	                }
+	                else if ($record->actionType == 'perf_inc') {
+		                $transaction['action'] = \Oara\Utilities::TYPE_PERFORMANCE_INCREASE;
+	                }
 
-                    $transaction ['unique_id'] = $record->commissionId;
-                    $transaction ['action'] = $record->actionType;
                     $transaction['merchantId'] = $record->advertiserId;
                     //event-date - The associated event date for the item in UTC time zone.
                     $transactionDate = \DateTime::createFromFormat("Y-m-d\TH:i:sO", $record->eventDate);
@@ -328,35 +350,35 @@ class CommissionJunctionGraphQL extends \Oara\Network
                     if (isset($record->shopperId)) {
                         $transaction['custom_id'] = $record->shopperId;
                     }
-                    $transaction ['amount'] = \Oara\Utilities::parseDouble($record->saleAmountPubCurrency);
-                    $transaction ['commission'] = \Oara\Utilities::parseDouble($record->pubCommissionAmountPubCurrency);
+                    $transaction['amount'] = \Oara\Utilities::parseDouble($record->saleAmountPubCurrency);
+                    $transaction['commission'] = \Oara\Utilities::parseDouble($record->pubCommissionAmountPubCurrency);
 
                     if ($record->actionStatus == 'locked' || $record->actionStatus == 'closed') {
-                        $transaction ['status'] = \Oara\Utilities::STATUS_CONFIRMED;
+                        $transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
                     } else if ($record->actionStatus == 'extended' || $record->actionStatus == 'new') {
-                        $transaction ['status'] = \Oara\Utilities::STATUS_PENDING;
+                        $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
                     } else if ($record->actionStatus == 'corrected') {
-                        $transaction ['status'] = \Oara\Utilities::STATUS_DECLINED;
+                        $transaction['status'] = \Oara\Utilities::STATUS_DECLINED;
                     }
 
-                    if ($transaction ['commission'] == 0) {
-                        $transaction ['status'] = \Oara\Utilities::STATUS_PENDING;
+                    if ($transaction['commission'] == 0) {
+                        $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
                     }
 
                     /*
                     // Negative commission must be subtracted by original commission identified by the same 'original-action-id' field - 2018-07-13 <PN>
                     // Only if result is zero the commission could be set DECLINED. This logic must be implemented by the caller!
-                    if ($transaction ['amount'] < 0 || $transaction ['commission'] < 0) {
-                        $transaction ['status'] = \Oara\Utilities::STATUS_DECLINED;
-                        $transaction ['amount'] = \abs($transaction ['amount']);
-                        $transaction ['commission'] = \abs($transaction ['commission']);
+                    if ($transaction['amount'] < 0 || $transaction['commission'] < 0) {
+                        $transaction['status'] = \Oara\Utilities::STATUS_DECLINED;
+                        $transaction['amount'] = \abs($transaction['amount']);
+                        $transaction['commission'] = \abs($transaction['commission']);
                     }
                     */
-                    $transaction ['aid'] = $record->aid;
-                    $transaction ['order-id'] = $record->orderId;
-                    $transaction ['original'] = ($record->original == true);
+                    $transaction['aid'] = $record->aid;
+                    $transaction['order-id'] = $record->orderId;
+                    $transaction['original'] = ($record->original == true);
                     // 'original-action-id' is used as reference field between original commission and adjust/correction commission - 2018-07-13 <PN>
-                    $transaction ['original-action-id'] = $record->originalActionId;
+                    $transaction['original-action-id'] = $record->originalActionId;
 
                     // Add new record to return array
                     $a_transactions[] = $transaction;

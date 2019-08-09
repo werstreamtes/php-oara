@@ -229,7 +229,6 @@ class Publicidees extends \Oara\Network
                     $transaction['title'] = urldecode($action['Title']) ;
                     $transaction['currency'] = $action['ProgramCurrency'];
                     $transaction['custom_id'] = $action['SubID'];
-                    $transaction['status'] = null;
                     $transaction['approved'] = false;
                     $transaction['status'] = null;
                     if ($action['ActionStatus'] == 0) {
