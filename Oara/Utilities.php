@@ -52,6 +52,38 @@ class Utilities
      */
     const STATUS_PAID = 'paid';
 
+	/**
+	 * sales type sale
+	 * @var string
+	 */
+    const TYPE_SALE = 'sale';
+	/**
+	 * sales type bonus
+	 * @var string
+	 */
+    const TYPE_BONUS = 'bonus';
+	/**
+	 * sales type lead
+	 * @var string
+	 */
+    const TYPE_LEAD = 'lead';
+	/**
+	 * sales type click
+	 * @var string
+	 */
+    const TYPE_CLICK = 'click';
+	/**
+	 * sales type impression
+	 * @var string
+	 */
+    const TYPE_IMPRESSION = 'impression';
+	/**
+	 * sales type performance increase
+	 * @var string
+	 */
+    const TYPE_PERFORMANCE_INCREASE = 'performance_increase';
+
+
 
     /**
      * offer type Voucher
