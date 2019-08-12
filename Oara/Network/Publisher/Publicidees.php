@@ -116,20 +116,22 @@ class Publicidees extends \Oara\Network
     }
 
     /**
+	 *
+	 * ActionStatus = Status of Action
+	 * 0 = action refused
+	 * 1 = action pending
+	 * 2 = action approved
+	 * ActionType = Type of action
+	 * 3 = sales-based remuneration
+	 * 4 = form-based remuneration
+     * See: https://performance.timeonegroup.com/PDF/en_US/TimeOne_APISUBID_EN.pdf
      *
-     * ActionStatus = Status of Action
-     * 0 = action refused
-     * 1 = action pending
-     * 2 = action approved
-     * ActionType = Type of action
-     * 3 = sales-based remuneratio
-     * 4 = form-based remuneration
-     *
-     * @param null $merchantList
-     * @param \DateTime|null $dStartDate
-     * @param \DateTime|null $dEndDate
-     * @return array
-     */
+	 * @param null $merchantList
+	 * @param \DateTime|null $dStartDate
+	 * @param \DateTime|null $dEndDate
+	 * @return array
+	 * @throws \Exception
+	 */
     public function getTransactionList($merchantList = null, \DateTime $dStartDate = null, \DateTime $dEndDate = null)
     {
         $totalTransactions = array();
@@ -220,7 +222,10 @@ class Publicidees extends \Oara\Network
                     */
                     $transaction = Array();
                     $transaction['merchantId'] = $program[0]['id'];
+                    //Order number
                     $transaction['unique_id'] = $action['id'];
+                    //commission ID
+                    $transaction['commission_id'] = $action['ProgramComID'];
                     $transaction['date'] = $action['ActionDate'];
                     $transaction["validation_date"] = $action['ValidationDate'];    // Future use - <PN>
                     $transaction['amount'] = $action['CartAmount'];
