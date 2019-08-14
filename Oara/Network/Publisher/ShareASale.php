@@ -1,24 +1,29 @@
 <?php
+
 namespace Oara\Network\Publisher;
-    /**
-     * The goal of the Open Affiliate Report Aggregator (OARA) is to develop a set
-     * of PHP classes that can download affiliate reports from a number of affiliate networks, and store the data in a common format.
-     *
-     * Copyright (C) 2016  Fubra Limited
-     * This program is free software: you can redistribute it and/or modify
-     * it under the terms of the GNU Affero General Public License as published by
-     * the Free Software Foundation, either version 3 of the License, or any later version.
-     * This program is distributed in the hope that it will be useful,
-     * but WITHOUT ANY WARRANTY; without even the implied warranty of
-     * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-     * GNU Affero General Public License for more details.
-     * You should have received a copy of the GNU Affero General Public License
-     * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-     *
-     * Contact
-     * ------------
-     * Fubra Limited <support@fubra.com> , +44 (0)1252 367 200
-     **/
+
+use Oara\Utilities;
+
+/**
+ * The goal of the Open Affiliate Report Aggregator (OARA) is to develop a set
+ * of PHP classes that can download affiliate reports from a number of affiliate networks, and store the data in a common format.
+ *
+ * Copyright (C) 2016  Fubra Limited
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Contact
+ * ------------
+ * Fubra Limited <support@fubra.com> , +44 (0)1252 367 200
+ **/
+
 /**
  * Export Class
  *
@@ -30,184 +35,261 @@ namespace Oara\Network\Publisher;
  */
 class ShareASale extends \Oara\Network
 {
-    /**
-     * API Secret
-     * @var string
-     */
-    private $_apiSecret = null;
-    /**
-     * API Token
-     * @var string
-     */
-    private $_apiToken = null;
-    /**
-     * Merchant ID
-     * @var string
-     */
-    private $_affiliateId = null;
-    /**
-     * Api Version
-     * @var float
-     */
-    private $_apiVersion = null;
-    /**
-     * Api Server
-     * @var string
-     */
-    private $_apiServer = null;
+	/**
+	 * API Secret
+	 * @var string
+	 */
+	private $_apiSecret = null;
+	/**
+	 * API Token
+	 * @var string
+	 */
+	private $_apiToken = null;
+	/**
+	 * Merchant ID
+	 * @var string
+	 */
+	private $_affiliateId = null;
+	/**
+	 * Api Version
+	 * @var float
+	 */
+	private $_apiVersion = null;
+	/**
+	 * Api Server
+	 * @var string
+	 */
+	private $_apiServer = null;
 
-    /**
-     * Constructor and Login
-     * @param $credentials
-     * @return ShareASale
-     */
-    public function login($credentials)
-    {
-        $this->_affiliateId = \preg_replace("/[^0-9]/", "", $credentials['affiliateId']);
-        $this->_apiToken = $credentials['apiToken'];
-        $this->_apiSecret = $credentials['apiSecret'];
-        $this->_apiVersion = 1.8;
-        $this->_apiServer = "http://shareasale.com/x.cfm?";
-    }
+	/**
+	 * Constructor and Login
+	 * @param $credentials
+	 * @return ShareASale
+	 */
+	public function login($credentials)
+	{
+		$this->_affiliateId = preg_replace("/[^0-9]/", "", $credentials['affiliateId']);
+		$this->_apiToken = $credentials['apiToken'];
+		$this->_apiSecret = $credentials['apiSecret'];
+		$this->_apiVersion = 2.3;
+		$this->_apiServer = "http://shareasale.com/x.cfm?";
+	}
 
-    /**
-     * @return array
-     */
-    public function getNeededCredentials()
-    {
-        $credentials = array();
+	/**
+	 * @return array
+	 */
+	public function getNeededCredentials()
+	{
+		$credentials = array();
 
-        $parameter = array();
-        $parameter["description"] = "Affiliate ID";
-        $parameter["required"] = true;
-        $parameter["name"] = "Affiliate ID";
-        $credentials["affiliateid"] = $parameter;
+		$parameter = array();
+		$parameter["description"] = "Affiliate ID";
+		$parameter["required"] = true;
+		$parameter["name"] = "Affiliate ID";
+		$credentials["affiliateid"] = $parameter;
 
-        $parameter = array();
-        $parameter["description"] = "API token";
-        $parameter["required"] = true;
-        $parameter["name"] = "API token";
-        $credentials["apitoken"] = $parameter;
+		$parameter = array();
+		$parameter["description"] = "API token";
+		$parameter["required"] = true;
+		$parameter["name"] = "API token";
+		$credentials["apitoken"] = $parameter;
 
-        $parameter = array();
-        $parameter["description"] = "API secret";
-        $parameter["required"] = true;
-        $parameter["name"] = "API secret";
-        $credentials["apisecret"] = $parameter;
+		$parameter = array();
+		$parameter["description"] = "API secret";
+		$parameter["required"] = true;
+		$parameter["name"] = "API secret";
+		$credentials["apisecret"] = $parameter;
 
-        return $credentials;
-    }
+		return $credentials;
+	}
 
-    /**
-     * @return bool
-     */
-    public function checkConnection()
-    {
-        $connection = true;
+	/**
+	 * @return bool
+	 */
+	public function checkConnection()
+	{
+		$connection = true;
 
-        $returnResult = self::makeCall("apitokencount");
-        if ($returnResult) {
-            //parse HTTP Body to determine result of request
-            if (\stripos($returnResult, "Error Code ")) { // error occurred
-                $connection = false;
-            }
-        } else { // connection error
-            $connection = false;
-        }
+		$returnResult = self::makeCall("apitokencount");
+		if ($returnResult) {
+			//parse HTTP Body to determine result of request
+			if (stripos($returnResult, "Error Code ")) { // error occurred
+				$connection = false;
+			}
+		} else { // connection error
+			$connection = false;
+		}
 
-        return $connection;
-    }
+		return $connection;
+	}
 
-    /**
-     * @return array
-     */
-    public function getMerchantList()
-    {
+	/**
+	 * @return array
+	 */
+	public function getMerchantList()
+	{
 
-        $merchants = array();
+		$merchants = array();
 
-        $returnResult = self::makeCall("merchantStatus");
-        $exportData = \str_getcsv($returnResult, "\r\n");
-        $num = \count($exportData);
-        for ($i = 1; $i < $num; $i++) {
-            $merchantArray = \str_getcsv($exportData[$i], "|");
-            if (\count($merchantArray) > 1) {
-                $obj = Array();
-                $obj['cid'] = (int)$merchantArray[0];
-                $obj['name'] = $merchantArray[1];
-                $merchants[] = $obj;
-            }
-        }
+		$returnResult = self::makeCall("merchantStatus");
+		$exportData = \str_getcsv($returnResult, "\r\n");
+		$num = \count($exportData);
+		for ($i = 1; $i < $num; $i++) {
+			$merchantArray = \str_getcsv($exportData[$i], "|");
+			if (\count($merchantArray) > 1) {
+				$obj = Array();
+				$obj['cid'] = (int)$merchantArray[0];
+				$obj['name'] = $merchantArray[1];
+				$merchants[] = $obj;
+			}
+		}
 
-        return $merchants;
-    }
+		return $merchants;
+	}
 
-    /**
-     * @param null $merchantList
-     * @param \DateTime|null $dStartDate
-     * @param \DateTime|null $dEndDate
-     * @return array
-     */
-    public function getTransactionList($merchantList = null, \DateTime $dStartDate = null, \DateTime $dEndDate = null)
-    {
-        $totalTransactions = array();
-        $mechantIdList = \Oara\Utilities::getMerchantIdMapFromMerchantList($merchantList);
-        $returnResult = self::makeCall("activity", "&dateStart=" . $dStartDate->format("m/d/Y") . "&dateEnd=" . $dEndDate->format("m/d/Y"));
-        $exportData = \str_getcsv($returnResult, "\r\n");
-        $num = \count($exportData);
-        for ($i = 1; $i < $num; $i++) {
-            $transactionExportArray = \str_getcsv($exportData[$i], "|");
-            if (\count($transactionExportArray) > 1 && isset($mechantIdList[(int)$transactionExportArray[2]])) {
-                $transaction = Array();
-                $merchantId = (int)$transactionExportArray[2];
-                $transaction['merchantId'] = $merchantId;
-                $transactionDate = \DateTime::createFromFormat("M-d-Y H:i:s", $transactionExportArray[3]);
-                $transaction['date'] = $transactionDate->format("yyyy-MM-dd HH:mm:ss");
-                $transaction['unique_id'] = (int)$transactionExportArray[0];
 
-                if ($transactionExportArray[1] != null) {
-                    $transaction['custom_id'] = $transactionExportArray[1];
-                }
+	/**
+	 * See: https://account.shareasale.com/a-apimanager.cfm?
+	 * @param null $merchantList
+	 * @param \DateTime|null $dStartDate
+	 * @param \DateTime|null $dEndDate
+	 * @return array
+	 * @throws \Exception
+	 */
+	public function getTransactionList($merchantList = null, \DateTime $dStartDate = null, \DateTime $dEndDate = null)
+	{
+		$totalTransactions = array();
 
-                if ($transactionExportArray[9] != null) {
-                    $transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
-                } else
-                    if ($transactionExportArray[8] != null) {
-                        $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
-                    } else
-                        if ($transactionExportArray[7] != null) {
-                            $transaction['status'] = \Oara\Utilities::STATUS_DECLINED;
-                        } else {
-                            $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
-                        }
-                $transaction['amount'] = \Oara\Utilities::parseDouble($transactionExportArray[4]);
-                $transaction['commission'] = \Oara\Utilities::parseDouble($transactionExportArray[5]);
-                $totalTransactions[] = $transaction;
-            }
-        }
-        return $totalTransactions;
-    }
+		$returnResult = self::makeCall("activity", "&dateStart=" . $dStartDate->format("m/d/Y") . "&dateEnd=" . $dEndDate->format("m/d/Y"));
+		if (stripos($returnResult, "Error Code ")) {
+			// error occurred
+			echo "[ShareASale][Error] " . $returnResult . PHP_EOL;
+			var_dump($returnResult);
+			throw new \Exception($returnResult);
+		}
+		$exportData = str_getcsv($returnResult, "\r\n");
+		$num = count($exportData);
+		for ($i = 1; $i < $num; $i++) {
+			$transactionExportArray = str_getcsv($exportData[$i], "|");
+			if (count($transactionExportArray) < 26) {
+				continue;
+			}
+			$transaction = Array();
+			$transaction['unique_id'] = (int)$transactionExportArray[0];
+			if (isset($transactionExportArray[1])) {
+				$transaction["affiliate_ID"] = (int)$transactionExportArray[1];
+			}
+			$transaction['merchantId'] = (int)$transactionExportArray[2];
+			if (isset($transactionExportArray[20])) {
+				$transaction['campaign_name'] = $transactionExportArray[20];
+			}
+			if (isset($transactionExportArray[3])) {
+				//ShareASale.com Inc. Chicago IL 60654
+				$transaction["date"] = new \DateTime($transactionExportArray[3], new \DateTimeZone('America/Chicago'));
+				$transaction["date"]->setTimezone(new \DateTimeZone('Europe/Rome'));
+			}
+			$transaction['amount'] = Utilities::parseDouble($transactionExportArray[4]);
+			$transaction['commission'] = Utilities::parseDouble($transactionExportArray[5]);
+			$transaction['currency'] = 'USD';
+			$comment = null;
+			if (isset($transactionExportArray[6])) {
+				$comment = $transactionExportArray[6];
+				$transaction['comment'] = $comment;
+			}
+			$voided = null;
+			if (isset($transactionExportArray[7])) {
+				$voided = $transactionExportArray[7];
+				$transaction["voided"] = $voided;
+			}
+			$pending_date = null;
+			if (isset($transactionExportArray[8])) {
+				$pending_date = $transactionExportArray[8];
+				$transaction["pending_date"] = $pending_date;
+			}
+			$locked = null;
+			if (isset($transactionExportArray[9])) {
+				$locked = $transactionExportArray[9];
+				$transaction["locked"] = $locked;
+			}
+			if (isset($transactionExportArray[10])) {
+				$transaction['custom_id'] = $transactionExportArray[10];
+			}
+			if (isset($transactionExportArray[11])) {
+				$transaction['referrer'] = $transactionExportArray[11];
+			}
+			$reversal_date = null;
+			if (isset($transactionExportArray[12])) {
+				$reversal_date = $transactionExportArray[12];
+				$transaction["reversal_date"] = $reversal_date;
+			}
+			if (isset($transactionExportArray[13]) && isset($transactionExportArray[14])) {
+				$str_to_time_date = strtotime($transactionExportArray[13]);
+				$date = date("Y-m-d", $str_to_time_date);
+				$str_to_time_time = strtotime($transactionExportArray[14]);
+				$time = date("H:i:s", $str_to_time_time);
+				$click_date = $date . " " . $time;
 
-    /**
-     * @param $actionVerb
-     * @param string $params
-     * @return mixed
-     */
-    private function makeCall($actionVerb, $params = "")
-    {
+				$transaction["click_date"] = new \DateTime($click_date, new \DateTimeZone('America/Chicago'));
+				$transaction["click_date"]->setTimezone(new \DateTimeZone('Europe/Rome'));
+			}
+			if (isset($transactionExportArray[15])) {
+				$banner_id = $transactionExportArray[15];
+				$transaction["banner_id"] = $banner_id;
+			}
+			if (isset($transactionExportArray[16])) {
+				$sku_list = $transactionExportArray[16];
+				$transaction["sku_list"] = $sku_list;
+			}
+			if (isset($transactionExportArray[17])) {
+				$quantity_list = $transactionExportArray[17];
+				$transaction["quantity_list"] = $quantity_list;
+			}
+			$lock_date = null;
+			if (isset($transactionExportArray[18])) {
+				$lock_date = $transactionExportArray[18];
+				$transaction["lock_date"] = $lock_date;
+			}
+			$paid_date = null;
+			if (isset($transactionExportArray[19])) {
+				$paid_date = $transactionExportArray[19];
+				$transaction["paid_date"] = $paid_date;
+			}
+			if (!empty($voided)) {
+				$transaction['status'] = Utilities::STATUS_DECLINED;
+			} elseif (empty($locked) && !empty($lock_date)) {
+				$transaction['status'] = Utilities::STATUS_PENDING;
+			}
 
-        $myTimeStamp = \gmdate(DATE_RFC1123);
-        $sig = $this->_apiToken . ':' . $myTimeStamp . ':' . $actionVerb . ':' . $this->_apiSecret;
+			if (isset($transactionExportArray[22]) && $transactionExportArray[22] == 'Sale') {
+				$transaction['trans_type'] = Utilities::TYPE_SALE;
+			} elseif (isset($transactionExportArray[22]) && $transactionExportArray[22] == 'Lead') {
+				$transaction['trans_type'] = Utilities::TYPE_LEAD;
+			}
+			$totalTransactions[] = $transaction;
+		}
+		return $totalTransactions;
+	}
 
-        $sigHash = \hash("sha256", $sig);
-        $myHeaders = array("x-ShareASale-Date: $myTimeStamp", "x-ShareASale-Authentication: $sigHash");
-        $ch = \curl_init();
-        \curl_setopt($ch, CURLOPT_URL, $this->_apiServer . "affiliateId=" . $this->_affiliateId . "&token=" . $this->_apiToken . "&version=" . $this->_apiVersion . "&action=" . $actionVerb . $params);
-        \curl_setopt($ch, CURLOPT_HTTPHEADER, $myHeaders);
-        \curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-        \curl_setopt($ch, CURLOPT_HEADER, 0);
-        $returnResult = \curl_exec($ch);
-        \curl_close($ch);
-        return $returnResult;
-    }
+	/**
+	 * @param $actionVerb
+	 * @param string $params
+	 * @return mixed
+	 */
+	private function makeCall($actionVerb, $params = "")
+	{
+
+		$myTimeStamp = gmdate(DATE_RFC1123);
+		$sig = $this->_apiToken . ':' . $myTimeStamp . ':' . $actionVerb . ':' . $this->_apiSecret;
+
+		$sigHash = hash("sha256", $sig);
+		$myHeaders = array("x-ShareASale-Date: $myTimeStamp", "x-ShareASale-Authentication: $sigHash");
+		$ch = curl_init();
+		curl_setopt($ch, CURLOPT_URL, $this->_apiServer . "affiliateId=" . $this->_affiliateId . "&token=" . $this->_apiToken . "&version=" . $this->_apiVersion . "&action=" . $actionVerb . $params);
+		curl_setopt($ch, CURLOPT_HTTPHEADER, $myHeaders);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+		curl_setopt($ch, CURLOPT_HEADER, 0);
+		$returnResult = curl_exec($ch);
+		curl_close($ch);
+		return $returnResult;
+	}
 }
