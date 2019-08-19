@@ -132,19 +132,75 @@ class ShareASale extends \Oara\Network
 		$merchants = array();
 
 		$returnResult = self::makeCall("merchantStatus");
-		$exportData = \str_getcsv($returnResult, "\r\n");
-		$num = \count($exportData);
+		$exportData = str_getcsv($returnResult, "\r\n");
+		$num = count($exportData);
 		for ($i = 1; $i < $num; $i++) {
-			$merchantArray = \str_getcsv($exportData[$i], "|");
-			if (\count($merchantArray) > 1) {
+			$merchantArray = str_getcsv($exportData[$i], "|");
+			if (count($merchantArray) > 1) {
 				$obj = Array();
 				$obj['cid'] = (int)$merchantArray[0];
 				$obj['name'] = $merchantArray[1];
+				$obj['url'] = $merchantArray[2];
+				//Partnership Status: Declined, Yes, Pending
+				$obj['status'] = $merchantArray[8];
 				$merchants[] = $obj;
 			}
 		}
 
 		return $merchants;
+	}
+
+	/**
+	 * See: https://account.shareasale.com/a-apimanager.cfm?
+	 * @return array
+	 * @throws \Exception
+	 */
+	public function getVouchers()
+	{
+		$totalDeals = array();
+		//Add current=1 to view only current deals. Default is 0
+		$returnResult = self::makeCall("couponDeals", "&current=1");
+		if (stripos($returnResult, "Error Code ")) {
+			// error occurred
+			echo "[ShareASale][Error] " . $returnResult . PHP_EOL;
+			var_dump($returnResult);
+			throw new \Exception($returnResult);
+		}
+		$exportData = str_getcsv($returnResult, "\r\n");
+		$num = count($exportData);
+		for ($i = 1; $i < $num; $i++) {
+			$dealExportArray = str_getcsv($exportData[$i], "|");
+			if (count($dealExportArray) < 17) {
+				continue;
+			}
+			$deal = Array();
+			$deal['promotionId'] = (int)$dealExportArray[0];
+			$deal['advertiser_id'] = (int)$dealExportArray[1];
+			$deal['advertiser_name'] = (int)$dealExportArray[2];
+			if (isset($dealExportArray[3])) {
+				//ShareASale.com Inc. Chicago IL 60654
+				$deal["start_date"] = new \DateTime($dealExportArray[3], new \DateTimeZone('America/Chicago'));
+				$deal["start_date"]->setTimezone(new \DateTimeZone('Europe/Rome'));
+			}
+			if (isset($dealExportArray[4])) {
+				//ShareASale.com Inc. Chicago IL 60654
+				$deal["end_date"] = new \DateTime($dealExportArray[4], new \DateTimeZone('America/Chicago'));
+				$deal["end_date"]->setTimezone(new \DateTimeZone('Europe/Rome'));
+			}
+			$deal['name'] = $dealExportArray[6];
+			$deal['tracking'] = $dealExportArray[8];
+			$deal['description'] = $dealExportArray[11];
+			$deal['restriction'] = $dealExportArray[12];
+			$deal['code'] = $dealExportArray[14];
+			if (!empty($deal['code'])) {
+				$deal['type'] = Utilities::OFFER_TYPE_VOUCHER;
+			} else {
+				$deal['type'] = Utilities::OFFER_TYPE_DISCOUNT;
+			}
+			$deal['update_date'] = $dealExportArray[15];
+			$totalDeals[] = $deal;
+		}
+		return $totalDeals;
 	}
 
 
