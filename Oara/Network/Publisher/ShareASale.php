@@ -314,6 +314,9 @@ class ShareASale extends \Oara\Network
 				$transaction['status'] = Utilities::STATUS_DECLINED;
 			} elseif (empty($locked) && !empty($lock_date)) {
 				$transaction['status'] = Utilities::STATUS_PENDING;
+			} elseif (!empty($locked) && 1 == $locked) {
+				//Locked transactions are transactions that are eligible for payment.
+				$transaction['status'] = Utilities::STATUS_CONFIRMED;
 			}
 
 			if (isset($transactionExportArray[22]) && $transactionExportArray[22] == 'Sale') {
