@@ -113,7 +113,7 @@ class NetAffiliation extends \Oara\Network
 	{
 		$merchants = array();
 		try {
-			$url = 'http://flux.netaffiliation.com/xmltrack.php?sec=' . $_ENV['NETAFFILIATION_GET_MERCHANTS_KEY'];
+			$url = 'http://flux.netaffiliation.com/flux_prog.php?taff=' . $_ENV['NETAFFILIATION_GET_MERCHANTS_KEY'];
 
 			$ch = curl_init();
 			curl_setopt($ch, CURLOPT_URL, $url);
