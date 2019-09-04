@@ -1,24 +1,24 @@
 <?php
 namespace Oara\Network\Publisher;
-    /**
-     * The goal of the Open Affiliate Report Aggregator (OARA) is to develop a set
-     * of PHP classes that can download affiliate reports from a number of affiliate networks, and store the data in a common format.
-     *
-     * Copyright (C) 2016  Fubra Limited
-     * This program is free software: you can redistribute it and/or modify
-     * it under the terms of the GNU Affero General Public License as published by
-     * the Free Software Foundation, either version 3 of the License, or any later version.
-     * This program is distributed in the hope that it will be useful,
-     * but WITHOUT ANY WARRANTY; without even the implied warranty of
-     * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-     * GNU Affero General Public License for more details.
-     * You should have received a copy of the GNU Affero General Public License
-     * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-     *
-     * Contact
-     * ------------
-     * Fubra Limited <support@fubra.com> , +44 (0)1252 367 200
-     **/
+/**
+ * The goal of the Open Affiliate Report Aggregator (OARA) is to develop a set
+ * of PHP classes that can download affiliate reports from a number of affiliate networks, and store the data in a common format.
+ *
+ * Copyright (C) 2016  Fubra Limited
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Contact
+ * ------------
+ * Fubra Limited <support@fubra.com> , +44 (0)1252 367 200
+ **/
 
 /**
  * API Class
@@ -44,27 +44,27 @@ class Publicidees extends \Oara\Network
         $this->_user = $credentials['user'];
         $this->_password = $credentials['password'];
         $this->_client = new \Oara\Curl\Access($credentials);
-/*
-        $loginUrl = 'http://es.publicideas.com/logmein.php';
-        $valuesLogin = array(new \Oara\Curl\Parameter('loginAff', $user),
-            new \Oara\Curl\Parameter('passAff', $password),
-            new \Oara\Curl\Parameter('userType', 'aff')
-        );
+        /*
+                $loginUrl = 'http://es.publicideas.com/logmein.php';
+                $valuesLogin = array(new \Oara\Curl\Parameter('loginAff', $user),
+                    new \Oara\Curl\Parameter('passAff', $password),
+                    new \Oara\Curl\Parameter('userType', 'aff')
+                );
 
-        $urls = array();
-        $urls[] = new \Oara\Curl\Request($loginUrl, $valuesLogin);
-        $exportReport = $this->_client->post($urls);
-        $result = \json_decode($exportReport[0]);
-        $loginUrl = 'http://publisher.publicideas.com/entree_affilies.php';
-        $valuesLogin = array(new \Oara\Curl\Parameter('login', $result->login),
-            new \Oara\Curl\Parameter('pass', $result->pass),
-            new \Oara\Curl\Parameter('submit', 'Ok'),
-            new \Oara\Curl\Parameter('h', $result->h)
-        );
-        $urls = array();
-        $urls[] = new \Oara\Curl\Request($loginUrl, $valuesLogin);
-        $this->_client->post($urls);
-*/
+                $urls = array();
+                $urls[] = new \Oara\Curl\Request($loginUrl, $valuesLogin);
+                $exportReport = $this->_client->post($urls);
+                $result = \json_decode($exportReport[0]);
+                $loginUrl = 'http://publisher.publicideas.com/entree_affilies.php';
+                $valuesLogin = array(new \Oara\Curl\Parameter('login', $result->login),
+                    new \Oara\Curl\Parameter('pass', $result->pass),
+                    new \Oara\Curl\Parameter('submit', 'Ok'),
+                    new \Oara\Curl\Parameter('h', $result->h)
+                );
+                $urls = array();
+                $urls[] = new \Oara\Curl\Request($loginUrl, $valuesLogin);
+                $this->_client->post($urls);
+        */
     }
 
     /**
@@ -116,38 +116,44 @@ class Publicidees extends \Oara\Network
     }
 
     /**
-	 *
-	 * ActionStatus = Status of Action
-	 * 0 = action refused
-	 * 1 = action pending
-	 * 2 = action approved
-	 * ActionType = Type of action
-	 * 3 = sales-based remuneration
-	 * 4 = form-based remuneration
+     *
+     * ActionStatus = Status of Action
+     * 0 = action refused
+     * 1 = action pending
+     * 2 = action approved
+     * ActionType = Type of action
+     * 3 = sales-based remuneration
+     * 4 = form-based remuneration
      * See: https://performance.timeonegroup.com/PDF/en_US/TimeOne_APISUBID_EN.pdf
      *
-	 * @param null $merchantList
-	 * @param \DateTime|null $dStartDate
-	 * @param \DateTime|null $dEndDate
-	 * @return array
-	 * @throws \Exception
-	 */
+     * @param null $merchantList
+     * @param \DateTime|null $dStartDate
+     * @param \DateTime|null $dEndDate
+     * @return array
+     * @throws \Exception
+     */
     public function getTransactionList($merchantList = null, \DateTime $dStartDate = null, \DateTime $dEndDate = null)
     {
         $totalTransactions = array();
         try {
 
             //$response = file_get_contents ('http://api.publicidees.com/subid.php5?p=51238&k=c534b0f5dcdddb5f56caa70e4ff3ec3b');
-/*
-            echo "usr: ".$this->_user."<br>";
-            echo "pwd ".$this->_password."<br>";
-            echo "url: ".('http://api.publicidees.com/subid.php5?p='.$this->_user.'&k='.$this->_password.'')."<br>";
-*/
-            $response = file_get_contents ('http://api.publicidees.com/subid.php5?p='.$this->_user.'&k='.$this->_password.'&dd='.$dStartDate->format('Y-m-d').'&df='.$dEndDate->format('Y-m-d'));
+            /*
+                        echo "usr: ".$this->_user."<br>";
+                        echo "pwd ".$this->_password."<br>";
+                        echo "url: ".('http://api.publicidees.com/subid.php5?p='.$this->_user.'&k='.$this->_password.'')."<br>";
+            */
+            //$response = file_get_contents ('http://api.publicidees.com/subid.php5?p='.$this->_user.'&k='.$this->_password.'&dd='.$dStartDate->format('Y-m-d').'&df='.$dEndDate->format('Y-m-d'));
+            //$response = file_get_contents ('http://api.publicidees.com/subid.php5?p='.$this->_user.'&k='.$this->_password.'&dd=2019-09-01&df='.$dEndDate->format('Y-m-d'));
 
-            //echo "<br><br>RESPONSE<br><br>";
-            //var_dump($response);
+            $url = 'http://api.publicidees.com/subid.php5?p='.$this->_user.'&k='.$this->_password.'&dd=2019-09-01&df='.$dEndDate->format('Y-m-d');
 
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, false);
+            $response = curl_exec($ch);
+            curl_close($ch);
 
             //error messages returned by api call:
             //1) You reached the limit of 3 call(s) in the last 900 seconds (15 min). Try again later. Thank you
@@ -157,29 +163,38 @@ class Publicidees extends \Oara\Network
                 strpos($response, 'Wrong') !== false)
                 throw new \Exception($response);
 
+            $xml_encode = utf8_encode($response);
+
+            //Convert the XML string into an SimpleXMLElement object.
+            $ids = \simplexml_load_string($xml_encode, "SimpleXMLElement", \LIBXML_NOCDATA);
+
+            //echo "<br><br>RESPONSE<br><br>";
+            //var_dump($response);
+
+
             /*  XML PER TEST */
-/*
-            $response =
-                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
-                <partner id='51238'>
-                    <program id='390'>
-                        <name>
-                            Wineandco
-                        </name>
-                        <action id=\"1826271-606458\" SubID=\"\" ActionDate=\"2017-04-12 14:32:54\" ValidationDate=\"\" ActionStatus=\"2\" ActionType=\"3\" ProgramCommission=\"10.000%\" ActionCommission=\"17.833\" CartAmount=\"178.33\" ProgramComID=\"835377\" PartnerComID=\"835018\" Title=\"Vente_NouveauClient\" ProgramCurrency=\"EUR\" Device=\"desktop\" />
-                    </program>
-                    <program id='546'>
-                        <name>
-                            <![CDATA[SexyAvenue FR]]>
-                        </name>
-                        <action id=\"24865487\" SubID=\"\" ActionDate=\"2017-04-12 16:44:10\" ValidationDate=\"\" ActionStatus=\"2\" ActionType=\"3\" ProgramCommission=\"20.000%\" ActionCommission=\"22.238\" CartAmount=\"111.19\" ProgramComID=\"73146\" PartnerComID=\"73146\" Title=\"Vente\" ProgramCurrency=\"EUR\" Device=\"desktop\" />
-                        <action id=\"24865308\" SubID=\"\" ActionDate=\"2017-04-12 13:27:26\" ValidationDate=\"\" ActionStatus=\"1\" ActionType=\"3\" ProgramCommission=\"20.000%\" ActionCommission=\"3.334\" CartAmount=\"16.67\" ProgramComID=\"73146\" PartnerComID=\"73146\" Title=\"Vente\" ProgramCurrency=\"EUR\" Device=\"mobile\" />
-                        <action id=\"24865456\" SubID=\"\" ActionDate=\"2017-04-12 15:28:46\" ValidationDate=\"\" ActionStatus=\"2\" ActionType=\"3\" ProgramCommission=\"20.000%\" ActionCommission=\"8.486\" CartAmount=\"42.43\" ProgramComID=\"73146\" PartnerComID=\"73146\" Title=\"Vente\" ProgramCurrency=\"EUR\" Device=\"desktop\" />
-                    </program>
-                </partner>
-            ";
-*/
-            $ids = new \SimpleXMLElement($response);
+            /*
+                        $response =
+                            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+                            <partner id='51238'>
+                                <program id='390'>
+                                    <name>
+                                        Wineandco
+                                    </name>
+                                    <action id=\"1826271-606458\" SubID=\"\" ActionDate=\"2017-04-12 14:32:54\" ValidationDate=\"\" ActionStatus=\"2\" ActionType=\"3\" ProgramCommission=\"10.000%\" ActionCommission=\"17.833\" CartAmount=\"178.33\" ProgramComID=\"835377\" PartnerComID=\"835018\" Title=\"Vente_NouveauClient\" ProgramCurrency=\"EUR\" Device=\"desktop\" />
+                                </program>
+                                <program id='546'>
+                                    <name>
+                                        <![CDATA[SexyAvenue FR]]>
+                                    </name>
+                                    <action id=\"24865487\" SubID=\"\" ActionDate=\"2017-04-12 16:44:10\" ValidationDate=\"\" ActionStatus=\"2\" ActionType=\"3\" ProgramCommission=\"20.000%\" ActionCommission=\"22.238\" CartAmount=\"111.19\" ProgramComID=\"73146\" PartnerComID=\"73146\" Title=\"Vente\" ProgramCurrency=\"EUR\" Device=\"desktop\" />
+                                    <action id=\"24865308\" SubID=\"\" ActionDate=\"2017-04-12 13:27:26\" ValidationDate=\"\" ActionStatus=\"1\" ActionType=\"3\" ProgramCommission=\"20.000%\" ActionCommission=\"3.334\" CartAmount=\"16.67\" ProgramComID=\"73146\" PartnerComID=\"73146\" Title=\"Vente\" ProgramCurrency=\"EUR\" Device=\"mobile\" />
+                                    <action id=\"24865456\" SubID=\"\" ActionDate=\"2017-04-12 15:28:46\" ValidationDate=\"\" ActionStatus=\"2\" ActionType=\"3\" ProgramCommission=\"20.000%\" ActionCommission=\"8.486\" CartAmount=\"42.43\" ProgramComID=\"73146\" PartnerComID=\"73146\" Title=\"Vente\" ProgramCurrency=\"EUR\" Device=\"desktop\" />
+                                </program>
+                            </partner>
+                        ";
+            */
+            //$ids = new \SimpleXMLElement($response);
 
             /*
                     foreach ($ids->program as $program) {
