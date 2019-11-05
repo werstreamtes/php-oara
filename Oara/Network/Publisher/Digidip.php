@@ -89,12 +89,11 @@ class Digidip extends \Oara\Network
 			$user = $this->_credentials['user'];
 			$password = $this->_credentials['password'];
 			$id_site = $this->_credentials['idSite'];
-			$page = 0;
 			$loop = true;
 			$a_dates = array();
 
 			if (empty($dStartDate) || empty($dEndDate)){
-				throw new \Exception("[Digidip][getTransactionList] Date required. Max request time frame is 7 days");
+				throw new \Exception("[Digidip][getTransactionList][Exception] Date required. Max request time frame is 7 days");
 			}
 			$interval = $dStartDate->diff($dEndDate);
 			$interval_in_days = $interval->days;
@@ -107,7 +106,7 @@ class Digidip extends \Oara\Network
 					$dStartDate = clone $auxDate;
 					$auxStartDate = clone $auxDate;
 					$auxDate = $auxStartDate->modify("+ 6 days");
-					if ($auxDate > $dEndDate){
+					if ($auxDate >= $dEndDate){
 						$auxDate = $dEndDate;
 						$a_dates[] = array($dStartDate, $auxDate);
 					}
@@ -119,7 +118,7 @@ class Digidip extends \Oara\Network
 			foreach ($a_dates as $dates){
 				$dStartDate = $dates[0];
 				$dEndDate = $dates[1];
-
+				$page = 0;
 				while ($loop){
 
 					$transactions = "https://api.digidip.net/detailed-transactions";
@@ -147,8 +146,7 @@ class Digidip extends \Oara\Network
 					$transactionsList = json_decode($curl_results, true);
 
 					if (isset($transactionsList['data'])){
-						if (count($transactionsList["data"]) == 0) {
-							$loop = false;
+						if (count($transactionsList['data']) == 0) {
 							break;
 						}
 						foreach ($transactionsList['data'] as $transactionJson) {
@@ -158,9 +156,12 @@ class Digidip extends \Oara\Network
 						}
 						$page = (int)(1 + $page);
 					}
+					elseif (empty($transactionsList)){
+						throw new \Exception("[Digidip][getTransactionList][Exception] Check authorization params");
+					}
 					else{
-						if (isset($transactionsList['errors']) && isset($transactionsList['message'])){
-							throw new \Exception("[Digidip][getTransactionList] " . $transactionsList['message']);
+						if (isset($transactionsList['message'])){
+							throw new \Exception("[Digidip][getTransactionList][Exception] " . $transactionsList['message']);
 						}
 						$loop = false;
 					}
