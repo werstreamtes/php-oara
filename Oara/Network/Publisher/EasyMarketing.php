@@ -23,7 +23,7 @@ use Oara\Utilities;
  * ------------
  * Fubra Limited <support@fubra.com> , +44 (0)1252 367 200
  **/
-class VerticalAds extends \Oara\Network
+class EasyMarketing extends \Oara\Network
 {
 	private $_credentials = null;
 
@@ -81,9 +81,8 @@ class VerticalAds extends \Oara\Network
 	public function getTransactionList($merchantList = null, \DateTime $dStartDate = null, \DateTime $dEndDate = null)
 	{
 		/**
-		 * See: https://data.verticalads.net/account/docs/verticalAds-Zentrale-Publisher-Schnittstelle-v1.3.pdf
-		 * https://data.verticalads.net/api/general/v1.3/api.php?user=USERNAME&key=KEY&network=NETWORK
-		 * Returns the result in the JSON format (default format)
+		 * See: https://wiki.easy-m.de/index.php/Publisher:Doku:API
+		 * FAQ: https://wiki.easy-m.de/index.php/Publisher:FAQ#Gibt_es_eine_Dokumentation_zur_Transaktions_.2F_Statistik_API
 		 */
 		$totalTransactions = array();
 		try {
@@ -93,7 +92,7 @@ class VerticalAds extends \Oara\Network
 			$a_dates = array();
 
 			if (empty($dStartDate) || empty($dEndDate)) {
-				throw new \Exception("[VerticalAds][getTransactionList][Exception] Date required. Max request time frame is 31 days");
+				throw new \Exception("[EasyMarketing][getTransactionList][Exception] Date required. Max request time frame is 31 days");
 			}
 			$interval = $dStartDate->diff($dEndDate);
 			$interval_in_days = $interval->days;
@@ -117,14 +116,10 @@ class VerticalAds extends \Oara\Network
 			foreach ($a_dates as $dates) {
 				$dStartDate = $dates[0];
 				$dEndDate = $dates[1];
-
-				$transactions = "https://data.verticalads.net/api/general/v1.3/api.php";
+				$url_api_transactions = 'https://' . $user . '/api//' . $password . '/publisher/' . $id_site . '/get-statistic_transactions.xml';
 				$params = array(
-					new \Oara\Curl\Parameter('network', $id_site),
-					new \Oara\Curl\Parameter('user', $user),
-					new \Oara\Curl\Parameter('key', $password),
-					new \Oara\Curl\Parameter('startDateConversion', $dStartDate->format('Y-m-d')),
-					new \Oara\Curl\Parameter('endDateConversion', $dEndDate->format('Y-m-d')),
+					new \Oara\Curl\Parameter('condition[period][from]', $dStartDate->format('d.m.Y')),
+					new \Oara\Curl\Parameter('condition[period][to]', $dEndDate->format('d.m.Y')),
 				);
 
 				$p = array();
@@ -132,34 +127,41 @@ class VerticalAds extends \Oara\Network
 					$p[] = $parameter->getKey() . '=' . \urlencode($parameter->getValue());
 				}
 				$get_params = implode('&', $p);
-
+				$url = $url_api_transactions . '?' . $get_params;
 				$ch = curl_init();
-				curl_setopt($ch, CURLOPT_URL, $transactions . '?' . $get_params);
+				curl_setopt($ch, CURLOPT_URL, $url);
 				curl_setopt($ch, CURLOPT_POST, false);
 				curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
 
-				$curl_results = curl_exec($ch);
-				curl_close($ch);
-				if (false == $curl_results || strpos($curl_results, 'error') !== false) {
-					throw new \Exception('[VerticalAds][getTransactionList][Exception] Invalid response, results: ' . $curl_results);
+				$xml = curl_exec($ch);
+				if ($xml == 'NO PERMISSION') {
+					throw new \Exception("[EasyMarketing][getTransactionList][Exception] Check the access token value. " . $xml);
+				} elseif (false == $xml) {
+					throw new \Exception("[EasyMarketing][getTransactionList][Exception] Invalid URL: " . $url);
 				}
-				$transactionsList = json_decode($curl_results, true);
+				curl_close($ch);
 
-				if (isset($transactionsList['conversions'])) {
-					$n_transactions = count($transactionsList['conversions']);
-					if ($n_transactions > 0) {
-						if (isset($transactionsList['summary']['totalConversionsCount']) && $n_transactions !== $transactionsList['summary']['totalConversionsCount']) {
-							throw new \Exception("[VerticalAds][getTransactionList][Exception] Check the number of transactions. totalConversionsCount: " . $transactionsList['summary']['totalConversionsCount']
-								. ' conversions: ' . $n_transactions);
-						}
-						foreach ($transactionsList['conversions'] as $transactionJson) {
+				//Convert the XML string into an SimpleXMLElement object.
+				$xml = @\simplexml_load_string($xml, "SimpleXMLElement", \LIBXML_NOCDATA);
+				//Encode the SimpleXMLElement object into a JSON string.
+				$json = json_encode($xml);
+				$transactionsList = json_decode($json, true);
 
+				if (isset($transactionsList['item'])) {
+					if (isset($transactionsList['item']['criterion'])) {
+						$a_transaction = self::createTransactionArray($transactionsList['item']);
+						$totalTransactions[] = $a_transaction;
+					} else {
+						foreach ($transactionsList['item'] as $transactionJson) {
 							$a_transaction = self::createTransactionArray($transactionJson);
 							$totalTransactions[] = $a_transaction;
 						}
 					}
+				} elseif (isset($transactionsList[0]) && strpos($transactionsList[0], "\n") !== false) {
+					//no transactions
+					continue;
 				} else {
-					throw new \Exception("[VerticalAds][getTransactionList][Exception] " . $transactionsList);
+					throw new \Exception("[EasyMarketing][getTransactionList][Exception] " . $transactionsList);
 				}
 			}
 		} catch (\Exception $e) {
@@ -174,46 +176,43 @@ class VerticalAds extends \Oara\Network
 	{
 
 		$transaction = Array();
-		$transaction['unique_id'] = $transactionJson['networkOrderId'];
-		$transaction['merchantId'] = $transactionJson['networkCampaignId'];
-		$transaction['merchantName'] = $transactionJson['networkCampaignName'];
-		$transaction['date'] = $transactionJson['networkDateTimeConversion'];
-		$transaction['click_date'] = $transactionJson['networkDateTimeClick'] ?: null;
-		$transaction['update_date'] = $transactionJson['networkDateTimeLastUpdated'] ?: null;
+		$transaction['unique_id'] = $transactionJson['criterion'];
+		$transaction['merchantId'] = $transactionJson['campaign_id'];
+		$transaction['merchantName'] = $transactionJson['campaign_title'];
+		$transaction['date'] = $transactionJson['trackingtime'];
+		$transaction['click_date'] = $transactionJson['clicktime'] ?: null;
+		$transaction['update_date'] = $transactionJson['processingdate'] ?: null;
+		$transaction['paid_date'] = $transactionJson['payoutdate'] ?: null;
 		$transaction['amount'] = \Oara\Utilities::parseDouble($transactionJson['turnover']);
-		$transaction['commission'] = \Oara\Utilities::parseDouble($transactionJson['commission']);
-		$transaction['currency'] = $transactionJson['networkCurrency'];
+		$transaction['commission'] = \Oara\Utilities::parseDouble($transactionJson['provision']);
 		//subid
-		$transaction['custom_id'] = $transactionJson['networkAdspaceSubid'] ?: null;
-		$transaction['title'] = $transactionJson['networkConversionTypeName'];
+		$transaction['custom_id'] = $transactionJson['subid'] ?: null;
+		$transaction['title'] = $transactionJson['trigger_title'];
+		$transaction['referrer'] = $transactionJson['referrer'];
 		$transaction['action'] = null;
 
 		switch ($transactionJson['status']) {
-			case 'PENDING':
+			case '0':
 				$transaction['status'] = \Oara\Utilities::STATUS_PENDING;
 				break;
-			case 'CANCELED':
+			case '2':
 				$transaction['status'] = \Oara\Utilities::STATUS_DECLINED;
 				break;
-			case 'APPROVED':
+			case '1':
+			case '3':
 				$transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
 				break;
 		}
-		switch ($transactionJson['conversionType']) {
-			case 'LEAD':
+		switch ($transactionJson['event']) {
+			case 'lead':
 				$transaction['action'] = \Oara\Utilities::TYPE_LEAD;
 				break;
-			case 'SALEFIX':
-			case 'SALEVAR':
+			case 'sale':
 				$transaction['action'] = \Oara\Utilities::TYPE_SALE;
 				break;
-		}
-
-		if (empty($transactionJson['conversionType']) &&
-			empty($transactionJson['networkAdspaceSubid']) &&
-			$transactionJson['status'] == 'APPROVED'
-		) {
-			$transaction['action'] = Utilities::TYPE_BONUS;
+			case 'bonus':
+				$transaction['action'] = Utilities::TYPE_BONUS;
+				break;
 		}
 		return $transaction;
 	}
