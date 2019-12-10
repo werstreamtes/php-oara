@@ -366,11 +366,13 @@ class LinkShare extends \Oara\Network
                 // WARNING: You must create a custom report called exactly "Individual Item Report + Transaction ID + Currency"
                 // adding to the standard item report the columns "Transaction ID" and "Currency"
                 $url = "https://ran-reporting.rakutenmarketing.com/en/reports/Individual-Item-Report-%2B-Transaction-ID-%2B-Currency/filters?start_date=" . $dStartDate->format("Y-m-d") . "&end_date=" . $dEndDate->format("Y-m-d") . "&include_summary=N" . "&network=" . $this->_nid . "&tz=GMT&date_type=transaction&token=" . $token64;
-                $result = file_get_contents($url);
+                $result = $this->getRemoteUrl($url);
+                // $result = file_get_contents($url);
 
                 // Signature Orders Report is a standard report already defined on the dashboard reports section
                 $url = "https://ran-reporting.rakutenmarketing.com/en/reports/signature-orders-report/filters?start_date=" . $dStartDate->format("Y-m-d") . "&end_date=" . $dEndDate->format("Y-m-d") . "&include_summary=N" . "&network=" . $this->_nid . "&tz=GMT&date_type=transaction&token=" . $token64;
-                $resultSignature = file_get_contents($url);
+                $resultSignature = $this->getRemoteUrl($url);
+                // $resultSignature = file_get_contents($url);
 
                 $signatureMap = array();
                 $exportData = str_getcsv($resultSignature, "\n");
@@ -640,4 +642,23 @@ class LinkShare extends \Oara\Network
 
         return $paymentHistory;
     }
+
+
+    /**
+     * Get a remote url content using Curl
+     * @param $url
+     * @return bool|string
+     */
+    private function getRemoteUrl($url)
+    {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 300);                 // 5 minutes timeout
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 300);
+        $response = curl_exec($ch);
+        curl_close($ch);
+        return $response;
+    }
+    
 }
