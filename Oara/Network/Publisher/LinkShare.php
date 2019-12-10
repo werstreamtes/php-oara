@@ -40,6 +40,7 @@ class LinkShare extends \Oara\Network
     private $_token = null;
     private $_user = null;
     private $_password = null;
+    private $_bearer = null;
 
     /**
      * @param $credentials
@@ -49,37 +50,62 @@ class LinkShare extends \Oara\Network
         $this->_user = $credentials ['user'];
         $this->_password = $credentials ['password'];
         $this->_idSite = $credentials ['idSite'];
-        $this->_client = new \Oara\Curl\Access ($credentials);
 
-        $loginUrl = 'https://login.linkshare.com/sso/login?service=' . \urlencode("http://cli.linksynergy.com/cli/publisher/home.php");
-        $valuesLogin = array(
-            new \Oara\Curl\Parameter ('HEALTHCHECK', 'HEALTHCHECK PASSED.'),
-            new \Oara\Curl\Parameter ('username', $this->_user),
-            new \Oara\Curl\Parameter ('password', $this->_password),
-            new \Oara\Curl\Parameter ('login', 'Log In')
-        );
-
-        $urls = array();
-        $urls [] = new \Oara\Curl\Request ($loginUrl, array());
-        $exportReport = $this->_client->get($urls);
-        $doc = new \DOMDocument();
-        @$doc->loadHTML($exportReport[0]);
-        $xpath = new \DOMXPath($doc);
-        $hidden = $xpath->query('//input[@type="hidden"]');
-        foreach ($hidden as $values) {
-            $valuesLogin[] = new \Oara\Curl\Parameter($values->getAttribute("name"), $values->getAttribute("value"));
+        // If the Bearer authentication token is defined into environment use it directly to get the access token - <PN> 2019-12-10
+        if (isset($_ENV['LINKSHARE_TOKEN'])) {
+            $this->_bearer = $_ENV['LINKSHARE_TOKEN'];
+            if (!empty($this->_bearer)) {
+                $this->getToken($this->_bearer);
+                // Create a dummy site structure (allows access to only one site at a time)
+                $site = new \stdClass ();
+                $site->website = '';
+                $site->url = '';;
+                $site->id = $this->_idSite;
+                $site->token = $this->_token;
+                if (isset($_ENV['LINKSHARE_SECURITY_TOKEN'])) {
+                    // Get security token from the environment - 2019-10-12 <PN>
+                    $site->secureToken = $_ENV['LINKSHARE_SECURITY_TOKEN'];
+                }
+                else {
+                    $site->secureToken = '';;
+                }
+                $siteList [] = $site;
+                $this->_siteList = $siteList;
+            }
         }
-        $doc = new \DOMDocument();
-        @$doc->loadHTML($exportReport[0]);
-        $xpath = new \DOMXPath($doc);
-        $formList = $xpath->query('//form');
-        foreach ($formList as $form) {
-            $loginUrl = "https://login.linkshare.com" . $form->getAttribute("action");
-        }
-        $urls = array();
-        $urls [] = new \Oara\Curl\Request ($loginUrl, $valuesLogin);
-        $this->_client->post($urls);
+        else {
+            // Try to login as a dashboard user to grab token from web services page
+            $this->_client = new \Oara\Curl\Access ($credentials);
 
+            $loginUrl = 'https://login.linkshare.com/sso/login?service=' . \urlencode("http://cli.linksynergy.com/cli/publisher/home.php");
+            $valuesLogin = array(
+                new \Oara\Curl\Parameter ('HEALTHCHECK', 'HEALTHCHECK PASSED.'),
+                new \Oara\Curl\Parameter ('username', $this->_user),
+                new \Oara\Curl\Parameter ('password', $this->_password),
+                new \Oara\Curl\Parameter ('login', 'Log In')
+            );
+
+            $urls = array();
+            $urls [] = new \Oara\Curl\Request ($loginUrl, array());
+            $exportReport = $this->_client->get($urls);
+            $doc = new \DOMDocument();
+            @$doc->loadHTML($exportReport[0]);
+            $xpath = new \DOMXPath($doc);
+            $hidden = $xpath->query('//input[@type="hidden"]');
+            foreach ($hidden as $values) {
+                $valuesLogin[] = new \Oara\Curl\Parameter($values->getAttribute("name"), $values->getAttribute("value"));
+            }
+            $doc = new \DOMDocument();
+            @$doc->loadHTML($exportReport[0]);
+            $xpath = new \DOMXPath($doc);
+            $formList = $xpath->query('//form');
+            foreach ($formList as $form) {
+                $loginUrl = "https://login.linkshare.com" . $form->getAttribute("action");
+            }
+            $urls = array();
+            $urls [] = new \Oara\Curl\Request ($loginUrl, $valuesLogin);
+            $this->_client->post($urls);
+        }
     }
 
     /**
@@ -108,6 +134,22 @@ class LinkShare extends \Oara\Network
         if (!empty($this->_token)) {
             return $this->_token;
         }
+
+        if (empty($apiKey)) {
+            if (!empty($this->_bearer)) {
+                $apiKey = $this->_bearer;
+            }
+            else {
+                // If the Bearer authentication token is defined into environment use it directly to get the access token - <PN> 2019-12-10
+                if (isset($_ENV['LINKSHARE_TOKEN'])) {
+                    $this->_bearer = $_ENV['LINKSHARE_TOKEN'];
+                    if (!empty($this->_bearer)) {
+                        $apiKey = $this->_bearer;
+                    }
+                }
+            }
+        }
+
         // Retrieve access token
         $loginUrl = "https://api.rakutenmarketing.com/token";
 
@@ -147,6 +189,14 @@ class LinkShare extends \Oara\Network
      */
     public function checkConnection()
     {
+        if ($this->_siteList) {
+            // Already have a valid connection!
+            return true;
+        }
+
+        // OLD connection trying to simulate a user login to scrape the report API token
+        // Replaced on 2019-12-10 with raw LINKSHARE_SECURITY_TOKEN set into environment and encrypted in getTransactionList() function
+        // ... It's not supposed to enter here anymore if login() succeeded
         $connection = false;
 
         $urls = array();
@@ -223,49 +273,63 @@ class LinkShare extends \Oara\Network
         return $connection;
     }
 
-    /**
-     * @return array
-     * @throws Exception
-     */
+
+
     public function getMerchantList()
     {
-        $merchants = array();
-        $merchantIdMap = array();
-        foreach ($this->_siteList as $site) {
-
-            $urls = array();
-            $urls [] = new \Oara\Curl\Request ($site->url, array());
-            $this->_client->get($urls);
-
-            $urls = array();
-            $urls [] = new \Oara\Curl\Request ('http://cli.linksynergy.com/cli/publisher/programs/carDownload.php', array());
-
-            $a_result = $this->_client->get($urls);
-            if (!is_array($a_result) || count($a_result) == 0) {
-                throw (new \Exception("[LinkShare] Error getting merchants"));
+        $arrResult = array();
+        try {
+            if (empty($this->_token)) {
+                $this->_token = $this->getToken('');
             }
-            $exportData = explode("\"\n", $a_result[0]);
-            $num = count($exportData);
-            for ($i = 1; $i < $num - 1; $i++) {
-                $merchantArray = str_getcsv($exportData [$i], ",", '"');
-                if (count($merchantArray) < 22) {
-                    // Invalid row... skip
-                    continue;
-                }
-                if (!in_array($merchantArray [2], $merchantIdMap)) {
-                    $obj = Array();
-                    $obj['cid'] = ( int )$merchantArray[2];
-                    $obj['name'] = $merchantArray[0];
-                    $obj['description'] = str_replace("\r\n", " ", $merchantArray[3]);
-                    $obj['url'] = $merchantArray[1];
-                    $obj['status'] = $merchantArray[7];
-                    $obj['termination_date'] = $merchantArray[21];
-                    $merchants[] = $obj;
-                    $merchantIdMap[] = $obj['cid'];
-                }
+
+            // https://api.rakutenmarketing.com/linklocator/1.0/getMerchByAppStatus/{status}
+
+            // Get all merchants with status "approved"
+
+            $url = "https://api.rakutenmarketing.com/linklocator/1.0/getMerchByAppStatus/approved";
+            $arrResult = array();
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_POST, FALSE);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array("Authorization: Bearer " . $this->_token));
+
+            $curl_results = curl_exec($ch);
+            curl_close($ch);
+
+            $response = xml2array($curl_results);
+            if (!is_array($response) || count($response) <= 0) {
+                $message = 'Linkshare: getMerchantList XML Error';
+                throw new \Exception($message);
             }
+            if (!isset($response['ns1:getMerchByAppStatusResponse'])) {
+                $message = 'Linkshare: getMerchantList XML Error';
+                throw new \Exception($message);
+            }
+            $result = $response['ns1:getMerchByAppStatusResponse'];
+            $merchants = $result['ns1:return'];
+            foreach ($merchants as $key => $merchant) {
+                $mid = isset($merchant['ns1:mid']) ? $merchant['ns1:mid'] : '';
+                $name = isset($merchant['ns1:name']) ? $merchant['ns1:name'] : '';
+                $status = isset($merchant['ns1:applicationStatus']) ? $merchant['ns1:applicationStatus'] : '';
+                $arrResult[] = array(
+                    'cid' => $mid,
+                    'name' => $name,
+                    'status' => $status,
+                    'termination_date' => null,
+                    'url' => null,
+                );
+            }
+            return $arrResult;
         }
-        return $merchants;
+        catch (\Exception $e) {
+            echo "LinkShare getMerchantList error: ".$e->getMessage()."\n ";
+            throw new \Exception($e);
+        }
+        return $arrResult;
     }
 
 
@@ -288,12 +352,24 @@ class LinkShare extends \Oara\Network
             if (empty($this->_sitesAllowed) || in_array($site->id, $this->_sitesAllowed)) {
                 echo "LinkShare - Get Transactions for site " . $site->id . PHP_EOL;
 
+                $security_token = $site->secureToken;
+                if (empty($security_token)) {
+                    echo "LinkShare ERROR - Empty Security Token for site " . $site->id . PHP_EOL;
+                    return $totalTransactions;
+                }
+                // Encode security token in standard Linkshare serialization structure - 2019-12-10
+                $encrypted = 'encrypteda:2:{s:5:"Token";s:{len}:"{token}";s:8:"UserType";s:9:"Publisher";}';
+                $encrypted = str_replace("{token}", $security_token, $encrypted);
+                $encrypted = str_replace("{len}", strlen($security_token), $encrypted);
+                $token64 = urlencode(base64_encode($encrypted));
+
                 // WARNING: You must create a custom report called exactly "Individual Item Report + Transaction ID + Currency"
                 // adding to the standard item report the columns "Transaction ID" and "Currency"
-                $url = "https://ran-reporting.rakutenmarketing.com/en/reports/Individual-Item-Report-%2B-Transaction-ID-%2B-Currency/filters?start_date=" . $dStartDate->format("Y-m-d") . "&end_date=" . $dEndDate->format("Y-m-d") . "&include_summary=N" . "&network=" . $this->_nid . "&tz=GMT&date_type=transaction&token=" . urlencode($site->token);
+                $url = "https://ran-reporting.rakutenmarketing.com/en/reports/Individual-Item-Report-%2B-Transaction-ID-%2B-Currency/filters?start_date=" . $dStartDate->format("Y-m-d") . "&end_date=" . $dEndDate->format("Y-m-d") . "&include_summary=N" . "&network=" . $this->_nid . "&tz=GMT&date_type=transaction&token=" . $token64;
                 $result = file_get_contents($url);
 
-                $url = "https://ran-reporting.rakutenmarketing.com/en/reports/signature-orders-report/filters?start_date=" . $dStartDate->format("Y-m-d") . "&end_date=" . $dEndDate->format("Y-m-d") . "&include_summary=N" . "&network=" . $this->_nid . "&tz=GMT&date_type=transaction&token=" . urlencode($site->token);
+                // Signature Orders Report is a standard report already defined on the dashboard reports section
+                $url = "https://ran-reporting.rakutenmarketing.com/en/reports/signature-orders-report/filters?start_date=" . $dStartDate->format("Y-m-d") . "&end_date=" . $dEndDate->format("Y-m-d") . "&include_summary=N" . "&network=" . $this->_nid . "&tz=GMT&date_type=transaction&token=" . $token64;
                 $resultSignature = file_get_contents($url);
 
                 $signatureMap = array();
@@ -362,8 +438,9 @@ class LinkShare extends \Oara\Network
         $vouchers = array();
 
         try {
-
-            $token = $this->getToken($apiKey);
+            if (empty($this->_token)) {
+                $this->_token = $this->getToken($apiKey);
+            }
 
             // https://api.rakutenmarketing.com/coupon/1.0?category=16&promotiontype=31&network=1&resultsperpage=100&pagenumber=2
 
@@ -401,7 +478,7 @@ class LinkShare extends \Oara\Network
                 curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE);
                 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-                curl_setopt($ch, CURLOPT_HTTPHEADER, array("Authorization: Bearer " . $token));
+                curl_setopt($ch, CURLOPT_HTTPHEADER, array("Authorization: Bearer " . $this->_token));
 
                 $curl_results = curl_exec($ch);
                 curl_close($ch);
