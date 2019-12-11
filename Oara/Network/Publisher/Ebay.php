@@ -109,6 +109,7 @@ class Ebay extends \Oara\Network
 	 */
 	public function getTransactionList($merchantList = null, \DateTime $dStartDate = null, \DateTime $dEndDate = null)
 	{
+		$totalTransactions = array();
 		//https://<Account_SID>:<Auth_Token>@api.partner.ebay.com/Mediapartners/<Account_SID>/Reports/ebay_partner_transaction_detail.json?STATUS=ALL&START_DATE=<YYYY-MM-DD>&END_DATE=<YYYY-MM-DD>
 		$transactions = "https://{$this->_credentials['user']}:{$this->_credentials['password']}@api.partner.ebay.com/Mediapartners/{$this->_credentials['user']}/Reports/ebay_partner_transaction_detail.json";
 		$params = array(
@@ -147,7 +148,7 @@ class Ebay extends \Oara\Network
 				$transaction['merchantId'] = 0;
 				$transaction['merchantName'] = '';
 				$transaction['unique_id'] = !empty($a_transaction['EbayCheckoutTransactionId']) ? $a_transaction['EbayCheckoutTransactionId'] : $a_transaction['EpnTransactionId'];
-				if (!empty($a_transaction['EpnTransactionId']) && !empty($a_transaction['EbayCheckoutTransactionId']) && ($a_transaction['EbayCheckoutTransactionId'] != $a_transaction['EpnTransactionId'])){
+				if (!empty($a_transaction['EpnTransactionId']) && !empty($a_transaction['EbayCheckoutTransactionId']) && ($a_transaction['EbayCheckoutTransactionId'] != $a_transaction['EpnTransactionId'])) {
 					echo '[Ebay][getTransactionList][Unique Transaction ID] difference between EbayCheckoutTransactionId and EpnTransactionId ' . $a_transaction['EbayCheckoutTransactionId'];
 				}
 
@@ -164,8 +165,8 @@ class Ebay extends \Oara\Network
 				$clickDate = \DateTime::createFromFormat("Y-m-d\TH:i:sO", $a_transaction['ClickTimestamp'], new \DateTimeZone('America/Denver'));
 				$clickDate->setTimezone(new \DateTimeZone('Europe/Rome'));
 				$transaction['click_date'] = $clickDate->format("Y-m-d H:i:s");
-				$transaction['amount'] = (float) !empty($a_transaction['DeltaSales']) ? $a_transaction['DeltaSales'] : $a_transaction['Sales'];
-				$transaction['commission'] = (float) !empty($a_transaction['DeltaEarnings']) ? $a_transaction['DeltaEarnings'] : $a_transaction['Earnings'];
+				$transaction['amount'] = (float)!empty($a_transaction['DeltaSales']) ? $a_transaction['DeltaSales'] : $a_transaction['Sales'];
+				$transaction['commission'] = (float)!empty($a_transaction['DeltaEarnings']) ? $a_transaction['DeltaEarnings'] : $a_transaction['Earnings'];
 				if ($a_transaction['Status'] == 'Approved') {
 					$transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
 				} elseif ($a_transaction['Status'] == 'Pending') {
