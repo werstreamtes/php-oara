@@ -263,9 +263,10 @@ class ImpactRadius extends \Oara\Network
 					}
 
 					$transaction['currency'] = (string)$action->Currency;
-					$transaction['amount'] = (double)$action->Amount;
-					$transaction['commission'] = (double)$action->Payout;
-					$transaction['commission_intended'] = (double)$action->IntendedPayout; // ??
+					// Handle either ',' or '.' as decimal separator - 2020-01-29 - PN
+					$transaction['amount'] = (double)(str_replace(',','.',$action->Amount));
+					$transaction['commission'] = (double)(str_replace(',','.',$action->Payout));
+					$transaction['commission_intended'] = (double)(str_replace(',','.',$action->IntendedPayout)); // ??
 					$totalTransactions[] = $transaction;
 				}
 
