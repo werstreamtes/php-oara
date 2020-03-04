@@ -155,9 +155,12 @@ class Groupon extends \Oara\Network
                         $transaction['custom_id'] = $transactionExportArray[1];
                     }
 
-                    if ($transactionExportArray[5] == 'VALID' || $transactionExportArray[5] == 'REFUNDED') {
+                    if ($transactionExportArray[5] == 'VALID') {
                         $transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
                     } else if ($transactionExportArray[5] == 'INVALID') {
+                        $transaction['status'] = \Oara\Utilities::STATUS_DECLINED;
+                    } else if ($transactionExportArray[5] == 'REFUNDED') {
+                        // Refunded must be considered declined - 2020-03-04 <PN>
                         $transaction['status'] = \Oara\Utilities::STATUS_DECLINED;
                     } else {
                         throw new \Exception("Status {$transactionExportArray[5]} unknown");
