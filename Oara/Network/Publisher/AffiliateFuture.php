@@ -1,24 +1,24 @@
 <?php
 namespace Oara\Network\Publisher;
-    /**
-     * The goal of the Open Affiliate Report Aggregator (OARA) is to develop a set
-     * of PHP classes that can download affiliate reports from a number of affiliate networks, and store the data in a common format.
-     *
-     * Copyright (C) 2016  Fubra Limited
-     * This program is free software: you can redistribute it and/or modify
-     * it under the terms of the GNU Affero General Public License as published by
-     * the Free Software Foundation, either version 3 of the License, or any later version.
-     * This program is distributed in the hope that it will be useful,
-     * but WITHOUT ANY WARRANTY; without even the implied warranty of
-     * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-     * GNU Affero General Public License for more details.
-     * You should have received a copy of the GNU Affero General Public License
-     * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-     *
-     * Contact
-     * ------------
-     * Fubra Limited <support@fubra.com> , +44 (0)1252 367 200
-     **/
+/**
+ * The goal of the Open Affiliate Report Aggregator (OARA) is to develop a set
+ * of PHP classes that can download affiliate reports from a number of affiliate networks, and store the data in a common format.
+ *
+ * Copyright (C) 2016  Fubra Limited
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Contact
+ * ------------
+ * Fubra Limited <support@fubra.com> , +44 (0)1252 367 200
+ **/
 /**
  * Export Class
  *
@@ -43,6 +43,14 @@ class AffiliateFuture extends \Oara\Network
         $password = $credentials['password'];
         $this->_client = new \Oara\Curl\Access($credentials);
 
+        if (isset($_ENV['AFFILIATE_FUTURE_API_KEY']) && isset($_ENV['AFFILIATE_FUTURE_API_PASSWORD'])) {
+            // BV-883 - Api credential was passed by ENV
+            $this->_api_credentials[] = new \Oara\Curl\Parameter('key', $_ENV['AFFILIATE_FUTURE_API_KEY']);
+            $this->_api_credentials[] = new \Oara\Curl\Parameter('passcode', $_ENV['AFFILIATE_FUTURE_API_PASSWORD']);
+            return;
+        }
+
+        // Try to scrape the login page
         $valuesLogin = array(
             new \Oara\Curl\Parameter('txtUsername', $user),
             new \Oara\Curl\Parameter('txtPassword', $password),
@@ -50,7 +58,7 @@ class AffiliateFuture extends \Oara\Network
         );
 
         $urls = array();
-        $urls[] = new \Oara\Curl\Request('http://afuk.affiliate.affiliatefuture.co.uk/login.aspx?', $valuesLogin);
+        $urls[] = new \Oara\Curl\Request('https://afuk.affiliate.affiliatefuture.co.uk/login.aspx?', $valuesLogin);
         $exportReport =  $this->_client->post($urls);
 
         $objDOM = new \DOMDocument();
@@ -63,7 +71,7 @@ class AffiliateFuture extends \Oara\Network
         }
         // Now try again to log
         $urls = array();
-        $urls[] = new \Oara\Curl\Request('http://afuk.affiliate.affiliatefuture.co.uk/login.aspx?', $valuesLogin);
+        $urls[] = new \Oara\Curl\Request('https://afuk.affiliate.affiliatefuture.co.uk/login.aspx?', $valuesLogin);
         $this->_client->post($urls);
 
         $this->_credentials = $credentials;
@@ -96,10 +104,15 @@ class AffiliateFuture extends \Oara\Network
      */
     public function checkConnection()
     {
+        if (count($this->_api_credentials) > 1 &&  $this->_api_credentials[0]->getKey() == 'key' && $this->_api_credentials[1]->getKey() == 'passcode') {
+            // BV-883 - Api credential was passed by ENV
+            return true;
+        }
+
         //If not login properly the construct launch an exception
         $urls = array();
-        // $urls[] = new \Oara\Curl\Request('http://affiliates.affiliatefuture.com/myaccount/invoices.aspx', array());
-        $urls[] = new \Oara\Curl\Request('http://afuk.affiliate.affiliatefuture.co.uk/reporting/ReportingAPIs.aspx', array());
+        // $urls[] = new \Oara\Curl\Request('https://affiliates.affiliatefuture.com/myaccount/invoices.aspx', array());
+        $urls[] = new \Oara\Curl\Request('https://afuk.affiliate.affiliatefuture.co.uk/reporting/ReportingAPIs.aspx', array());
         $result = $this->_client->get($urls);
 
         $this->_api_credentials = array();
@@ -281,7 +294,7 @@ class AffiliateFuture extends \Oara\Network
         for ($i = 0; $i < \count($urls); $i++) {
             $xml = \simplexml_load_string($xmlReport[$i], null, LIBXML_NOERROR | LIBXML_NOWARNING);
             if (isset($xml->error)) {
-                throw new \Exception('Error connecting with the server');
+                throw new \Exception('[AffiliateFuture][GetTransactionList] XML Error connecting to the server');
             }
             if (isset($xml->TransactionList)) {
                 foreach ($xml->TransactionList as $transaction) {
@@ -347,7 +360,7 @@ class AffiliateFuture extends \Oara\Network
     {
         $paymentHistory = array();
         $urls = array();
-        $urls[] = new \Oara\Curl\Request('http://affiliates.affiliatefuture.com/myaccount/invoices.aspx', array());
+        $urls[] = new \Oara\Curl\Request('https://affiliates.affiliatefuture.com/myaccount/invoices.aspx', array());
         $exportReport = $this->_client->get($urls);
 
         $doc = new \DOMDocument();
@@ -374,5 +387,4 @@ class AffiliateFuture extends \Oara\Network
 
         return $paymentHistory;
     }
-
 }
