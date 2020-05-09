@@ -1,24 +1,24 @@
 <?php
 namespace Oara\Network\Publisher;
-    /**
-     * The goal of the Open Affiliate Report Aggregator (OARA) is to develop a set
-     * of PHP classes that can download affiliate reports from a number of affiliate networks, and store the data in a common format.
-     *
-     * Copyright (C) 2016  Fubra Limited
-     * This program is free software: you can redistribute it and/or modify
-     * it under the terms of the GNU Affero General Public License as published by
-     * the Free Software Foundation, either version 3 of the License, or any later version.
-     * This program is distributed in the hope that it will be useful,
-     * but WITHOUT ANY WARRANTY; without even the implied warranty of
-     * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-     * GNU Affero General Public License for more details.
-     * You should have received a copy of the GNU Affero General Public License
-     * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-     *
-     * Contact
-     * ------------
-     * Fubra Limited <support@fubra.com> , +44 (0)1252 367 200
-     **/
+/**
+ * The goal of the Open Affiliate Report Aggregator (OARA) is to develop a set
+ * of PHP classes that can download affiliate reports from a number of affiliate networks, and store the data in a common format.
+ *
+ * Copyright (C) 2016  Fubra Limited
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Contact
+ * ------------
+ * Fubra Limited <support@fubra.com> , +44 (0)1252 367 200
+ **/
 
 /**
  * Export Class
@@ -385,48 +385,57 @@ class LinkShare extends \Oara\Network
                 $exportData = \str_getcsv($result, "\n");
                 $num = \count($exportData);
                 for ($j = 1; $j < $num; $j++) {
-                    $transactionData = \str_getcsv($exportData [$j], ",");
+                    try {
+                        $transactionData = \str_getcsv($exportData [$j], ",");
 
-                    if (count($transactionData) > 10 && (count($merchantIdList)==0 || isset($merchantIdList[$transactionData [3]]))) {
-                        $transaction = Array();
-                        $transaction['merchantId'] = ( int )$transactionData[3];
-                        $transaction['merchantName'] = $transactionData[4];
-                        $transactionDate = \DateTime::createFromFormat("m/d/y H:i:s", $transactionData[1] . " " . $transactionData[2]);
+                        if (count($transactionData) > 10 && (count($merchantIdList)==0 || isset($merchantIdList[$transactionData [3]]))) {
+                            if ($transactionData[1] === '' && strpos($transactionData[2],'/') !== false) {
+                                // BV-886 - Special case ... empty field after transaction id ... remove from array
+                                unset($transactionData[1]);
+                                $transactionData = array_values($transactionData);
+                            }
+                            $transaction = array();
+                            $transaction['merchantId'] = ( int )$transactionData[3];
+                            $transaction['merchantName'] = $transactionData[4];
+                            $transactionDate = \DateTime::createFromFormat("m/d/y H:i:s", $transactionData[1] . " " . $transactionData[2]);
 
-                        // $transaction['date'] = $transactionDate->format("Y-m-d H:i:s");
-                        $transaction['date'] = $transactionDate->format("Y-m-d H:i:s") . '+00:00';
+                            // $transaction['date'] = $transactionDate->format("Y-m-d H:i:s");
+                            $transaction['date'] = $transactionDate->format("Y-m-d H:i:s") . '+00:00';
 
-                        if (isset($signatureMap[$transactionData [0]])) {
-                            $transaction['custom_id'] = $signatureMap[$transactionData [0]];
+                            if (isset($signatureMap[$transactionData [0]])) {
+                                $transaction['custom_id'] = $signatureMap[$transactionData [0]];
+                            }
+                            $transaction['unique_id'] = $transactionData [10];
+                            $transaction['currency'] = $transactionData [11];
+
+                            // $sales = $filter->filter($transactionData [7]);
+                            $sales = \Oara\Utilities::parseDouble($transactionData [7]);
+
+                            if ($sales != 0) {
+                                $transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
+                            } else if ($sales == 0) {
+                                $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
+                            }
+
+                            $transaction['amount'] = \Oara\Utilities::parseDouble($transactionData [7]);
+
+                            $transaction['commission'] = \Oara\Utilities::parseDouble($transactionData [9]);
+
+                            if ($transaction['commission'] < 0) {
+                                $transaction['amount'] = abs($transaction['amount']);
+                                $transaction['commission'] = abs($transaction['commission']);
+                                $transaction['status'] = \Oara\Utilities::STATUS_DECLINED;
+                            }
+                            $transaction['IP'] = '';    // not available
+                            $totalTransactions [] = $transaction;
                         }
-                        $transaction['unique_id'] = $transactionData [10];
-                        $transaction['currency'] = $transactionData [11];
-
-                        // $sales = $filter->filter($transactionData [7]);
-                        $sales = \Oara\Utilities::parseDouble($transactionData [7]);
-
-                        if ($sales != 0) {
-                            $transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
-                        } else if ($sales == 0) {
-                            $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
-                        }
-
-                        $transaction['amount'] = \Oara\Utilities::parseDouble($transactionData [7]);
-
-                        $transaction['commission'] = \Oara\Utilities::parseDouble($transactionData [9]);
-
-                        if ($transaction['commission'] < 0) {
-                            $transaction['amount'] = abs($transaction['amount']);
-                            $transaction['commission'] = abs($transaction['commission']);
-                            $transaction['status'] = \Oara\Utilities::STATUS_DECLINED;
-                        }
-                        $transaction['IP'] = '';    // not available
-                        $totalTransactions [] = $transaction;
+                    }
+                    catch (\Exception $e) {
+                        echo "[LinkShare][getTransactionsList] Error: " . $e->getMessage();
                     }
                 }
             }
         }
-
         return $totalTransactions;
     }
 
@@ -446,7 +455,7 @@ class LinkShare extends \Oara\Network
 
             // https://api.rakutenmarketing.com/coupon/1.0?category=16&promotiontype=31&network=1&resultsperpage=100&pagenumber=2
 
-            
+
             $loginUrl = "https://api.rakutenmarketing.com/coupon/1.0";
             $currentPage = 1;
             $arrResult = array();
@@ -660,5 +669,5 @@ class LinkShare extends \Oara\Network
         curl_close($ch);
         return $response;
     }
-    
+
 }
