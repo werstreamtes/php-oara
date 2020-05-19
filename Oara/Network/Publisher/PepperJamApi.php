@@ -3,16 +3,13 @@ namespace Oara\Network\Publisher;
 
 class PepperJamApi extends \Oara\Network
 {
-    private $_client = null;
-
     private $_api_key;
 
-    /**
-     * @param $credentials
-     */
-    public function login($credentials)
+    private $BASE_PATH = "https://api.pepperjamnetwork.com/20120402/publisher";
+
+    public function __construct($apiKey)
     {
-        $this->_api_key = $credentials['api_key'];
+        $this->_api_key = $apiKey;
     }
 
     /**
@@ -28,22 +25,131 @@ class PepperJamApi extends \Oara\Network
      */
     public function getNeededCredentials()
     {
-        $credentials = array();
-
-        $parameter = array();
-        $parameter["description"] = "User Log in";
-        $parameter["required"] = true;
-        $parameter["name"] = "User";
-        $credentials["user"] = $parameter;
-
-        $parameter = array();
-        $parameter["description"] = "Password to Log in";
-        $parameter["required"] = true;
-        $parameter["name"] = "Password";
-        $credentials["password"] = $parameter;
-
-        return $credentials;
+        return [];
     }
+
+    /**
+     * @return array
+     */
+    public function getMerchantList()
+    {
+        $merchants = [];
+
+        try {
+            $MERCHANT_LIST_PATH = "{$this->BASE_PATH}/advertiser";
+
+            $client = $this->buildClient($MERCHANT_LIST_PATH);
+
+            $response = json_decode($this->execClientCall($client));
+
+            $merchants = $this->parseMerchants($response->data);
+
+            $nextPageUrl = null;
+            if (isset($response->meta->pagination->next->href)) {
+                $nextPageUrl = $response->meta->pagination->next->href;
+            }
+            
+            // iterate through pages
+            if ($nextPageUrl) {
+                $hasNextPage = true;
+                while ($hasNextPage) {
+                    $response = json_decode($this->getNextPage($nextPageUrl));
+
+                    $nextPageUrl = null;
+                    if (isset($response->meta->pagination->next->href)) {
+                        $nextPageUrl = $response->meta->pagination->next->href;
+                    }
+                    
+                    $merchants = array_merge($merchants, $this->parseMerchants($response->data));
+
+                    if (!$nextPageUrl) {
+                        $hasNextPage = false;
+                    }
+                }
+            }
+        }
+        catch (\Exception $e) {
+            throw new \Exception('[php-oara][Oara][Network][Publisher][PepperJamApi][getMerchantList][Exception] ' . $e->getMessage());
+        }
+
+        return $merchants;
+    }
+
+    /**
+     * @param null $merchantList
+     * @param \DateTime|null $dStartDate
+     * @param \DateTime|null $dEndDate
+     * @return array
+     * @throws Exception
+     */
+    public function getTransactionList($merchantList = null, \DateTime $dStartDate = null, \DateTime $dEndDate = null)
+    {
+        $transactions = [];
+
+        try {
+            $TRANSACTIONS_LIST_PATH = "{$this->BASE_PATH}/report/transaction-details";
+
+            $params = [
+                "startDate" => $dStartDate->format("Y-m-d"),
+                "endDate" => $dEndDate->format("Y-m-d")
+            ];
+
+            $client = $this->buildClient($TRANSACTIONS_LIST_PATH, $params);
+
+            $response = json_decode($this->execClientCall($client));
+
+            $transactions = $this->parseTransactions($response->data);
+
+            $nextPageUrl = null;
+            if (isset($response->meta->pagination->next->href)) {
+                $nextPageUrl = $response->meta->pagination->next->href;
+            }
+            
+            // iterate through pages
+            if ($nextPageUrl) {
+                $hasNextPage = true;
+                while ($hasNextPage) {
+                    $response = json_decode($this->getNextPage($nextPageUrl));
+
+                    $nextPageUrl = null;
+                    if (isset($response->meta->pagination->next->href)) {
+                        $nextPageUrl = $response->meta->pagination->next->href;
+                    }
+                    
+                    $transactions = array_merge($transactions, $this->parseTransactions($response->data));
+
+                    if (!$nextPageUrl) {
+                        $hasNextPage = false;
+                    }
+                }
+            }
+        }
+        catch (\Exception $e) {
+            throw new \Exception('[php-oara][Oara][Network][Publisher][PepperJamApi][getTransactionList][Exception] ' . $e->getMessage());
+        }
+
+        return $transactions;
+    }
+
+    /**
+     * @return array
+     */
+    public function getPaymentHistory()
+    {
+        return [];
+    }
+
+    /**
+     * @param $paymentId
+     * @return array
+     */
+    public function paymentTransactions($paymentId)
+    {
+       return [];
+    }
+
+
+    // PRIVATE
 
     private function buildClient($basePath, $params = []) 
     {
@@ -75,18 +181,20 @@ class PepperJamApi extends \Oara\Network
         return $response;
     }
 
-    /**
-     * @return array
-     */
-    public function getMerchantList()
+    private function parseMerchants($rawMerchants)
     {
-        $MERCHANT_LIST_PATH = "https://api.pepperjamnetwork.com/20120402/publisher/advertiser";
+        return array_map(function($rawMerchant) {
+            $merchant = [];
 
-        $client = $this->buildClient($MERCHANT_LIST_PATH);
+            $merchant["cid"] = $rawMerchant->id;
+            $merchant["name"] = $rawMerchant->name;
+            $merchant["url"] = $rawMerchant->website;
+            $merchant["status"] = $rawMerchant->status;
+            $merchant["launch_date"] = $rawMerchant->join_date;
 
-        $response = json_decode($this->execClientCall($client));
+            return $merchant;
 
-        return $response;
+        }, $rawMerchants);
     }
 
     private function parseTransactions($rawTransactions)
@@ -94,106 +202,43 @@ class PepperJamApi extends \Oara\Network
         return array_map(function($rawTransaction) {
             $transaction = [];
 
-            $transaction["unique_id"] = $data["transaction_id"];
-            $transaction["order_id"] = $data["order_id"];
-            $transaction["creative_type"] = $data["creative_type"];
-            $transaction["commission"] = $data["commission"];
-            $transaction["amount"] = $data["sale_amount"];
-            $transaction["type"] = $data["type"];
-            $transaction["date"] = $data["date"];
+            $transaction["unique_id"] = $rawTransaction->transaction_id;
+            $transaction["order_id"] = $rawTransaction->order_id;
+            $transaction["creative_type"] = $rawTransaction->creative_type;
+            $transaction["commission"] = \Oara\Utilities::parseDouble($rawTransaction->commission);
+            $transaction["amount"] = \Oara\Utilities::parseDouble($rawTransaction->sale_amount);
+            $transaction["type"] = $rawTransaction->type;
+            $transaction["date"] = $rawTransaction->date;
             // status
-            switch ($data["status"]) {
-            case "pending":
-                $transaction["status"] = \Oara\Utilities::STATUS_PENDING;
-                break;
-            case "":
-                $transaction["status"] = \Oara\Utilities::STATUS_CONFIRMED;
-                break;
-            case "":
-                $transaction["status"] = \Oara\Utilities::STATUS_DECLINED;
-                break;
-            case "":
-                $transaction["status"] = \Oara\Utilities::STATUS_PAID;
-                break;
-            default:
-                $transaction["status"] = "CHECK OARA STATUS PARSER";
-                break;
+            switch ($rawTransaction->status) {
+                case "pending":
+                case "delayed":
+                    $transaction["status"] = \Oara\Utilities::STATUS_PENDING;
+                    break;
+                case "lock":
+                    $transaction["status"] = \Oara\Utilities::STATUS_CONFIRMED;
+                    break;
+                case "unconfirmed":
+                    $transaction["status"] = \Oara\Utilities::STATUS_DECLINED;
+                    break;
+                case "paid":
+                    $transaction["status"] = \Oara\Utilities::STATUS_PAID;
+                    break;
+                default:
+                    $transaction["status"] = $rawTransaction->status;
+                    break;
             }
             
-            $transaction["new_to_file"] = $data["new_to_file"];
-            $transaction["sub_type"] = $data["sub_type"];
-            $transaction["custom_id"] = $data["sid"];
-            $transaction["program_name"] = $data["program_name"];
-            $transaction["program_id"] = $data["program_id"];
+            $transaction["new_to_file"] = $rawTransaction->new_to_file;
+            $transaction["sub_type"] = $rawTransaction->sub_type;
+            $transaction["custom_id"] = $rawTransaction->sid;
+            $transaction["program_name"] = $rawTransaction->program_name;
+            $transaction["program_id"] = $rawTransaction->program_id;
 
             return $transaction;
 
         }, $rawTransactions);
     }
 
-    /**
-     * @param null $merchantList
-     * @param \DateTime|null $dStartDate
-     * @param \DateTime|null $dEndDate
-     * @return array
-     * @throws Exception
-     */
-    public function getTransactionList($merchantList = null, \DateTime $dStartDate = null, \DateTime $dEndDate = null)
-    {
-        $TRANSACTIONS_LIST_PATH = "https://api.pepperjamnetwork.com/20120402/publisher/report/transaction-details";
-
-        $params = [
-            "startDate" => "2020-05-01",
-            "endDate" => "2020-05-18"
-        ];
-
-        $client = $this->buildClient($TRANSACTIONS_LIST_PATH, $params);
-
-        $response = json_decode($this->execClientCall($client));
-
-        if($response) {
-            $transactions = $this->parseTransactions($response->data);
-
-            $nextPage = null;
-            if(isset($metadata->meta->pagination->next)) {
-                $nextPage = $metadata->meta->pagination->next;
-            }
-            
-            // iterate through pages
-            if ($nextPage) {
-                $hasNextPage = true;
-                while($hasNextPage) {
-                    $response = $this->getNextPage($nextPage);
-                    $nextPage = $metadata["meta"]["pagination"]["next"];
-                    array_merge($transactions, $this->parseTransactions($response->data));
-
-                    if($nextPage) {
-                        $hasNextPage = false;
-                    }
-                }
-            }
-
-            return $transactions;
-        }
-
-        return [];
-    }
-
-    /**
-     * @return array
-     */
-    public function getPaymentHistory()
-    {
-        return [];
-    }
-
-    /**
-     * @param $paymentId
-     * @return array
-     */
-    public function paymentTransactions($paymentId)
-    {
-       return [];
-    }
 
 }
