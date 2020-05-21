@@ -188,7 +188,7 @@ class PepperJamApi extends \Oara\Network
             $merchant["name"] = $rawMerchant->name;
             $merchant["url"] = $rawMerchant->website;
             $merchant["status"] = $rawMerchant->status;
-            $merchant["launch_date"] = $rawMerchant->join_date;
+            $merchant["application_date"] = $rawMerchant->join_date;
 
             return $merchant;
         }, $rawMerchants);
