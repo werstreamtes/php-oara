@@ -67,8 +67,7 @@ class PepperJamApi extends \Oara\Network
                     }
                 }
             }
-        }
-        catch (\Exception $e) {
+        } catch (\Exception $e) {
             throw new \Exception('[php-oara][Oara][Network][Publisher][PepperJamApi][getMerchantList][Exception] ' . $e->getMessage());
         }
 
@@ -123,8 +122,7 @@ class PepperJamApi extends \Oara\Network
                     }
                 }
             }
-        }
-        catch (\Exception $e) {
+        } catch (\Exception $e) {
             throw new \Exception('[php-oara][Oara][Network][Publisher][PepperJamApi][getTransactionList][Exception] ' . $e->getMessage());
         }
 
@@ -145,13 +143,13 @@ class PepperJamApi extends \Oara\Network
      */
     public function paymentTransactions($paymentId)
     {
-       return [];
+        return [];
     }
 
 
     // PRIVATE
 
-    private function buildClient($basePath, $params = []) 
+    private function buildClient($basePath, $params = [])
     {
         $client = curl_init();
 
@@ -160,11 +158,11 @@ class PepperJamApi extends \Oara\Network
         $url = $basePath . "?" . http_build_query($params);
 
         curl_setopt($client, CURLOPT_URL, $url);
-        curl_setopt($client, CURLOPT_RETURNTRANSFER, TRUE);
+        curl_setopt($client, CURLOPT_RETURNTRANSFER, true);
         return $client;
     }
 
-    private function execClientCall($client) 
+    private function execClientCall($client)
     {
         $response = curl_exec($client);
         curl_close($client);
@@ -175,7 +173,7 @@ class PepperJamApi extends \Oara\Network
     {
         $client = curl_init();
         curl_setopt($client, CURLOPT_URL, $url);
-        curl_setopt($client, CURLOPT_RETURNTRANSFER, TRUE);
+        curl_setopt($client, CURLOPT_RETURNTRANSFER, true);
         $response = curl_exec($client);
         curl_close($client);
         return $response;
@@ -183,7 +181,7 @@ class PepperJamApi extends \Oara\Network
 
     private function parseMerchants($rawMerchants)
     {
-        return array_map(function($rawMerchant) {
+        return array_map(function ($rawMerchant) {
             $merchant = [];
 
             $merchant["cid"] = $rawMerchant->id;
@@ -193,13 +191,12 @@ class PepperJamApi extends \Oara\Network
             $merchant["launch_date"] = $rawMerchant->join_date;
 
             return $merchant;
-
         }, $rawMerchants);
     }
 
     private function parseTransactions($rawTransactions)
     {
-        return array_map(function($rawTransaction) {
+        return array_map(function ($rawTransaction) {
             $transaction = [];
 
             $transaction["unique_id"] = $rawTransaction->transaction_id;
@@ -236,9 +233,6 @@ class PepperJamApi extends \Oara\Network
             $transaction["program_id"] = $rawTransaction->program_id;
 
             return $transaction;
-
         }, $rawTransactions);
     }
-
-
 }
