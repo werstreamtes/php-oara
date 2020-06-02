@@ -72,7 +72,7 @@ class ShareASale extends \Oara\Network
 		$this->_apiToken = $credentials['apiToken'];
 		$this->_apiSecret = $credentials['apiSecret'];
 		$this->_apiVersion = 2.3;
-		$this->_apiServer = "http://shareasale.com/x.cfm?";
+		$this->_apiServer = "https://shareasale.com/x.cfm?";
 	}
 
 	/**
@@ -114,12 +114,16 @@ class ShareASale extends \Oara\Network
 		if ($returnResult) {
 			//parse HTTP Body to determine result of request
 			if (stripos($returnResult, "Error Code ")) { // error occurred
+                echo "[ShareASale][checkConnection][Error 1] " . $returnResult . PHP_EOL;
 				$connection = false;
 			}
+			else {
+                echo "[ShareASale][checkConnection][Remaining Calls] " . $returnResult . PHP_EOL;
+            }
 		} else { // connection error
+            echo "[ShareASale][checkConnection][Error 2] " . $returnResult . PHP_EOL;
 			$connection = false;
 		}
-
 		return $connection;
 	}
 
