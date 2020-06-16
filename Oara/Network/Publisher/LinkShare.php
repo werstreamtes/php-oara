@@ -379,7 +379,12 @@ class LinkShare extends \Oara\Network
                 $num = count($exportData);
                 for ($j = 1; $j < $num; $j++) {
                     $signatureData = str_getcsv($exportData [$j], ",");
-                    $signatureMap[$signatureData[3]] = $signatureData[0];
+                    $orderId = $signatureData[3];
+                    // BV-886 - Special case ... comma in order id ... remove it
+                    if (strpos($orderId,",") !== false) {
+                        $orderId = str_replace(",","",$orderId);
+                    }
+                    $signatureMap[$orderId] = $signatureData[0];
                 }
 
                 $exportData = \str_getcsv($result, "\n");
@@ -388,7 +393,7 @@ class LinkShare extends \Oara\Network
                     try {
                         $transactionData = \str_getcsv($exportData [$j], ",");
 
-                        if (count($transactionData) > 10 && (count($merchantIdList)==0 || isset($merchantIdList[$transactionData [3]]))) {
+                        if (count($transactionData) > 10 && (count($merchantIdList)==0 || isset($merchantIdList[$transactionData[3]]))) {
                             if ($transactionData[1] === '' && strpos($transactionData[2],'/') !== false) {
                                 // BV-886 - Special case ... empty field after transaction id ... remove from array
                                 unset($transactionData[1]);
@@ -402,14 +407,17 @@ class LinkShare extends \Oara\Network
                             // $transaction['date'] = $transactionDate->format("Y-m-d H:i:s");
                             $transaction['date'] = $transactionDate->format("Y-m-d H:i:s") . '+00:00';
 
-                            if (isset($signatureMap[$transactionData [0]])) {
-                                $transaction['custom_id'] = $signatureMap[$transactionData [0]];
+                            if (isset($signatureMap[$transactionData[0]])) {
+                                $transaction['custom_id'] = $signatureMap[$transactionData[0]];
                             }
-                            $transaction['unique_id'] = $transactionData [10];
-                            $transaction['currency'] = $transactionData [11];
+                            else {
+                                echo "[LinkShare][getTransactionsList] Warning: Cannot find signature (u1) for order id " . $transactionData[0] . " transaction id " . $transactionData[10];
+                            }
+                            $transaction['unique_id'] = $transactionData[10];
+                            $transaction['currency'] = $transactionData[11];
 
-                            // $sales = $filter->filter($transactionData [7]);
-                            $sales = \Oara\Utilities::parseDouble($transactionData [7]);
+                            // $sales = $filter->filter($transactionData[7]);
+                            $sales = \Oara\Utilities::parseDouble($transactionData[7]);
 
                             if ($sales != 0) {
                                 $transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
@@ -417,9 +425,9 @@ class LinkShare extends \Oara\Network
                                 $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
                             }
 
-                            $transaction['amount'] = \Oara\Utilities::parseDouble($transactionData [7]);
+                            $transaction['amount'] = \Oara\Utilities::parseDouble($transactionData[7]);
 
-                            $transaction['commission'] = \Oara\Utilities::parseDouble($transactionData [9]);
+                            $transaction['commission'] = \Oara\Utilities::parseDouble($transactionData[9]);
 
                             if ($transaction['commission'] < 0) {
                                 $transaction['amount'] = abs($transaction['amount']);
