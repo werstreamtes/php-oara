@@ -1,5 +1,6 @@
 <?php
 namespace Oara\Network\Publisher;
+
     /**
      * The goal of the Open Affiliate Report Aggregator (OARA) is to develop a set
      * of PHP classes that can download affiliate reports from a number of affiliate networks, and store the data in a common format.
@@ -30,40 +31,23 @@ namespace Oara\Network\Publisher;
  */
 class Belboon extends \Oara\Network
 {
+    private $_api_key;
+    private $_user_id;
 
-    protected $_client = null;
-    protected $_platformList = null;
+    private $BASE_PATH = "https://export.service.belboon.com";
+
+    public function __construct($apiKey, $user_id)
+    {
+        $this->_api_key = $apiKey;
+        $this->_user_id = $user_id;
+    }
 
     /**
-     * @param $credentials
-     */
-    public function login($credentials)
+    * @return bool
+    */
+    public function checkConnection()
     {
-        $user = $credentials['user'];
-        $password = $credentials['apipassword'];
-
-        //Setting the client.
-
-        $oSmartFeed = new \SoapClient("http://smartfeeds.belboon.com/SmartFeedServices.php?wsdl");
-        $oSessionHash = $oSmartFeed->login($user, $password);
-
-        $this->_client = new \SoapClient('http://api.belboon.com/?wsdl', array('login' => $user, 'password' => $password, 'trace' => true));
-        $this->_client->getAccountInfo();
-
-
-        if (!$oSessionHash->HasError) {
-
-            $sSessionHash = $oSessionHash->Records['sessionHash'];
-
-            $aResult = $oSmartFeed->getPlatforms($sSessionHash);
-            $platformList = array();
-            foreach ($aResult->Records as $record) {
-                if ($record['status'] == "active") {
-                    $platformList[] = $record;
-                }
-            }
-            $this->_platformList = $platformList;
-        }
+        return true;
     }
 
     /**
@@ -71,51 +55,27 @@ class Belboon extends \Oara\Network
      */
     public function getNeededCredentials()
     {
-        $credentials = array();
-
-        $parameter = array();
-        $parameter["description"] = "User Log in";
-        $parameter["required"] = true;
-        $parameter["name"] = "User";
-        $credentials["user"] = $parameter;
-
-        $parameter = array();
-        $parameter["description"] = "Api Password for Belboon";
-        $parameter["required"] = true;
-        $parameter["name"] = "Api Password";
-        $credentials["password"] = $parameter;
-
-        return $credentials;
+        return [];
     }
 
-    /**
-     * @return bool
-     */
-    public function checkConnection()
-    {
-        $connection = true;
-        return $connection;
-    }
-
+    
     /**
      * @return array
      */
     public function getMerchantList()
     {
-        $merchantList = array();
-        foreach ($this->_platformList as $platform) {
-            // $result = $this->_client->getPrograms($platform["id"], null, \utf8_encode('PARTNERSHIP'), null, null, null, 0);
-            $result = $this->_client->getPrograms($platform["id"], null, null, null, null, null, 0);
-            foreach ($result->handler->programs as $merchant) {
-                $obj = array();
-                $obj["name"] = $merchant["programname"];
-                $obj["cid"] = $merchant["programid"];
-                $obj["url"] = $merchant["advertiserurl"];
-                $obj["status"] = $merchant["partnershipstatus"];
-                $merchantList[] = $obj;
-            }
-        }
-        return $merchantList;
+        $MERCHANT_LIST_PATH = "{$this->BASE_PATH}/{$this->_api_key}/mlist.csv";
+
+        $rawMerchants = $this->callApi($MERCHANT_LIST_PATH);
+
+        return array_map(function ($rawMerchant) {
+            $merchant = [];
+
+            $merchant["name"] = $rawMerchant["title"];
+            $merchant["cid"] = $rawMerchant["mid"];
+
+            return $merchant;
+        }, $rawMerchants);
     }
 
     /**
@@ -126,53 +86,144 @@ class Belboon extends \Oara\Network
      */
     public function getTransactionList($merchantList = null, \DateTime $dStartDate = null, \DateTime $dEndDate = null)
     {
-        $totalTransactions = array();
-        $records_per_call = 200;
+        $TRANSACTIONS_LIST_PATH = "{$this->BASE_PATH}/{$this->_api_key}/reporttransactions.csv";
 
-        $merchantIdMap = \Oara\Utilities::getMerchantIdMapFromMerchantList($merchantList);
+        $params = [
+            'filter[date_from]' => $dStartDate->format('d.m.Y'),
+            'filter[date_to]' => $dEndDate->format('d.m.Y'),
+            'filter[timerange_type]' => 'absolute',
+            'filter[currencycode]' => 'EUR'
+        ];
 
-        $offset = 0;
-        while (true) {
-            $num_rercords = 0;
-            $result = $this->_client->getEventList(null, null, null, null, null, $dStartDate->format("Y-m-d"), $dEndDate->format("Y-m-d"), null, null, null, $records_per_call, $offset);
+        $rawTransactions = $this->callApi($TRANSACTIONS_LIST_PATH, $params);
 
-            foreach ($result->handler->events as $event) {
-                $num_rercords++;
-                // if (isset($merchantIdMap[$event["programid"]])) {
-                $transaction = Array();
-                $transaction['unique_id'] = $event["eventid"];
-                $transaction['merchantId'] = $event["programid"];
-                $transaction['date'] = $event["eventdate"];
-                $transaction['lastchangedate'] = $event["lastchangedate"];
-
-                if ($event["subid"] != null) {
-                    $transaction['custom_id'] = $event["subid"];
-                    if (\preg_match("/subid1=/", $transaction['custom_id'])) {
-                        $transaction['custom_id'] = str_replace("subid1=", "", $transaction['custom_id']);
-                    }
+        if ($merchantList) {
+            $rawTransactions = array_filter(
+                $rawTransactions,
+                function($rawTransaction) use ($merchantList) {
+                    return $rawTransaction["advertiser_id"] == $merchantList;
                 }
+            );
+        }
 
-                if ($event["eventstatus"] == 'APPROVED') {
-                    $transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
-                } else
-                    if ($event["eventstatus"] == 'PENDING') {
-                        $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
-                    } else
-                        if ($event["eventstatus"] == 'REJECTED') {
-                            $transaction['status'] = \Oara\Utilities::STATUS_DECLINED;
-                        }
+        return array_map(function ($rawTransaction) {
+            $transaction = [];
 
-                $transaction['amount'] = \Oara\Utilities::parseDouble($event["netvalue"]);
-                $transaction['commission'] = \Oara\Utilities::parseDouble($event["eventcommission"]);
-                $totalTransactions[] = $transaction;
-                // }
-            }
-            if ($num_rercords < $records_per_call) {
+            $transaction['unique_id'] = $rawTransaction["conversion_uniqid"];
+            $transaction['merchantId'] = $rawTransaction["advertiser_id"];
+            $transaction['date'] = $rawTransaction["conversion_tracking_time"];
+            $transaction['click_date'] = $rawTransaction["click_time"];
+            // $transaction['lastchangedate'] = $rawTransaction["lastchangedate"];
+
+            $transaction['custom_id'] = $this->getTrackingCode($rawTransaction["click_subid"]);
+
+            switch ($rawTransaction["conversion_status"]) {
+            case '0':
+            case '1':
+                $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
+                break;
+            case '2':
+                $transaction['status'] = \Oara\Utilities::STATUS_DECLINED;
+                break;
+            case '3':
+                $transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
                 break;
             }
-            $offset += $records_per_call;
-        }
-        return $totalTransactions;
+            $transaction['amount'] = \Oara\Utilities::parseDouble($rawTransaction["conversion_order_value"]);
+            $transaction['commission'] = \Oara\Utilities::parseDouble($rawTransaction["conversion_commission_total"]);
+
+            return $transaction;
+        }, $rawTransactions);
     }
 
+    public function getVouchers()
+    {
+        $VOUCHERS_LIST_PATH = "{$this->BASE_PATH}/{$this->_api_key}/vouchers.csv";
+
+        $params = [
+            'filter[uid]' => $this->_user_id
+        ];
+
+        $rawVouchers = $this->callApi($VOUCHERS_LIST_PATH, $params);
+
+        return $rawVouchers;
+    }
+
+    private function callApi($path, $params = null)
+    {
+        $client = curl_init();
+        $url = $path;
+        if ($params) {
+            $url = $url . "?" . http_build_query($params);
+        }
+
+        curl_setopt($client, CURLOPT_URL, $url);
+        curl_setopt($client, CURLOPT_RETURNTRANSFER, true);
+
+        $response = curl_exec($client);
+        curl_close($client);
+
+        $data = $this->convertCsvToArray($response);
+
+        return $data;
+    }
+
+    private function convertCsvToArray($csvString)
+    {
+        $data = $this->str_getcsv($csvString);
+
+        // remove last element, csv have a last \n, so last line is empty
+        array_pop($data);
+        
+        array_walk($data, function (&$a) use ($data) {
+            $a = array_combine($data[0], $a);
+        });
+
+        array_shift($data);
+
+        return $data;
+    }
+
+    private function str_getcsv($input, $delimiter = ";", $enclosure = '"') {
+        $memSize = 50 * 1024 * 1024;
+        $fp = fopen("php://temp/maxmemory:$memSize", 'r+');
+        fputs($fp, $input);
+        rewind($fp);
+
+        $data = [];
+        while (($result = fgetcsv($fp, 1000, $delimiter, $enclosure)) !== FALSE)
+        {
+            $data[] = $result;
+        }
+
+        fclose($fp);
+        return $data;
+    }
+
+    // there are 3 cases here...
+    // 1: the code is a normal string
+    // 2: the code is like "subid1=CODE
+    // 3: the code is multiple like "subid1=CODE1+scm1=CODE2"
+
+    // if present, we take the code
+    // if there is the scm1 code as parameter we take that
+    // if there is the subid1 code as parameter we take that
+    private function getTrackingCode($rawString) {
+        $trackingCode = null;
+
+        if ($rawString != null) {
+            $trackingCode = $rawString;
+            if (strpos($trackingCode, '=')) {
+                if(strpos($trackingCode, 'scm1=')) {
+                    $splittingString = explode('scm1=', $trackingCode)[1];
+                    $trackingCode = explode('+', $splittingString)[0];
+                } elseif(strpos($trackingCode, 'subid1=')) {
+                    $splittingString = explode('subid1=', $trackingCode)[1];
+                    $trackingCode = explode('+', $splittingString)[0];
+                }
+            }
+        }
+
+        return $trackingCode;
+    }
 }
