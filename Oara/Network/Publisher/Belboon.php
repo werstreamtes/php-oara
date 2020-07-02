@@ -203,10 +203,10 @@ class Belboon extends \Oara\Network
     // there are 3 cases here...
     // 1: the code is a normal string
     // 2: the code is like "subid1=CODE
-    // 3: the code is multiple like "subid1=CODE1+scm1=CODE2"
+    // 3: the code is multiple like "subid1=CODE1+smc1=CODE2"
 
     // if present, we take the code
-    // if there is the scm1 code as parameter we take that
+    // if there is the smc1 code as parameter we take that
     // if there is the subid1 code as parameter we take that
     private function getTrackingCode($rawString) {
         $trackingCode = null;
@@ -214,10 +214,10 @@ class Belboon extends \Oara\Network
         if ($rawString != null) {
             $trackingCode = $rawString;
             if (strpos($trackingCode, '=')) {
-                if(strpos($trackingCode, 'scm1=')) {
-                    $splittingString = explode('scm1=', $trackingCode)[1];
+                if(strpos($trackingCode, 'smc1=') !== false) {
+                    $splittingString = explode('smc1=', $trackingCode)[1];
                     $trackingCode = explode('+', $splittingString)[0];
-                } elseif(strpos($trackingCode, 'subid1=')) {
+                } elseif(strpos($trackingCode, 'subid1=') !== false) {
                     $splittingString = explode('subid1=', $trackingCode)[1];
                     $trackingCode = explode('+', $splittingString)[0];
                 }
