@@ -142,71 +142,79 @@ class CommissionJunctionGraphQL extends \Oara\Network
     private function getMerchantExport()
     {
         $merchantReportList = array();
-        $page=1;
-        $per_page = 100;
-        $total_pages = 99;
-        $start = time();
-        $per_minute = 0;
-        do {
-            if ($page > $total_pages){
-                exit;
-            }
-            if ($per_minute++ > 25 && (time() - $start) < 60) {
-                // Don't go above the 25 calls/minute
-                while ((time() - $start) < 60) {
-                    sleep(1);
+        // Make two loops, first for "joined" and second for "notjoined prograns - 2020-08-22 <PN>
+        for ($loop=1; $loop<=2; $loop++) {
+            $page = 1;
+            $per_page = 100;
+            $total_pages = 99;
+            $start = time();
+            $per_minute = 0;
+            do {
+                if ($page > $total_pages) {
+                    exit;
                 }
-                $per_minute = 0;
-                $start = time();
-            }
-            // Get All programs even if not active - 2018-04-23 <PN>
-            $response = self::apiCall('https://advertiser-lookup.api.cj.com/v3/advertiser-lookup?advertiser-ids=&records-per-page='.$per_page.'&page-number='.$page);
-            $xml = \simplexml_load_string($response, null, LIBXML_NOERROR | LIBXML_NOWARNING);
-            if (!isset($xml->advertisers)) {
-                break;
-            }
-            $total_adv = (int)$xml->advertisers[0]['total-matched'];
-            $total_pages = ceil($total_adv/$per_page);
-
-            foreach ($xml->advertisers->advertiser as $adv) {
-
-                $adv_id='';
-                $adv_name='';
-
-                foreach ($adv->children() AS $key=>$value) {
-
-                    if ($key=='advertiser-id'){
-                        $adv_id=(string)$value;
+                if ($per_minute++ > 25 && (time() - $start) < 60) {
+                    // Don't go above the 25 calls/minute
+                    while ((time() - $start) < 60) {
+                        sleep(1);
                     }
-                    if ($key=='advertiser-name'){
-                        $adv_name=(string)$value;
-                    }
-                    // Added more info - 2018-04-23 <PN>
-                    if ($key=='account-status'){
-                        $adv_status=(string)$value;
-                    }
-                    if ($key=='relationship-status'){
-                        $adv_relationship_status=(string)$value;
-                    }
-                    if ($key=='program-url'){
-                        $adv_url=(string)$value;
-                    }
+                    $per_minute = 0;
+                    $start = time();
                 }
-                if (trim($adv_id)!='' && trim($adv_name)!=''){
-                    $merchantReportList[]=[
-                        $adv_id,
-                        $adv_name,
-                        $adv_status,
-                        $adv_relationship_status,
-                        $adv_url,
-                    ] ;
+                // Get All programs even if not active - 2018-04-23 <PN>
+                if ($loop == 1) {
+                    // Joined Only - 2020-08-22 <PN>
+                    $response = self::apiCall('https://advertiser-lookup.api.cj.com/v3/advertiser-lookup?advertiser-ids=joined&records-per-page=' . $per_page . '&page-number=' . $page);
                 }
+                else {
+                    // Not Joined Only  - 2020-08-22 <PN>
+                    $response = self::apiCall('https://advertiser-lookup.api.cj.com/v3/advertiser-lookup?advertiser-ids=notjoined&records-per-page=' . $per_page . '&page-number=' . $page);
+                }
+                $xml = \simplexml_load_string($response, null, LIBXML_NOERROR | LIBXML_NOWARNING);
+                if (!isset($xml->advertisers)) {
+                    break;
+                }
+                $total_adv = (int)$xml->advertisers[0]['total-matched'];
+                $total_pages = ceil($total_adv / $per_page);
 
-            }
-            $page++;
+                foreach ($xml->advertisers->advertiser as $adv) {
+
+                    $adv_id = '';
+                    $adv_name = '';
+
+                    foreach ($adv->children() as $key => $value) {
+
+                        if ($key == 'advertiser-id') {
+                            $adv_id = (string)$value;
+                        }
+                        if ($key == 'advertiser-name') {
+                            $adv_name = (string)$value;
+                        }
+                        // Added more info - 2018-04-23 <PN>
+                        if ($key == 'account-status') {
+                            $adv_status = (string)$value;
+                        }
+                        if ($key == 'relationship-status') {
+                            $adv_relationship_status = (string)$value;
+                        }
+                        if ($key == 'program-url') {
+                            $adv_url = (string)$value;
+                        }
+                    }
+                    if (trim($adv_id) != '' && trim($adv_name) != '') {
+                        $merchantReportList[] = [
+                            $adv_id,
+                            $adv_name,
+                            $adv_status,
+                            $adv_relationship_status,
+                            $adv_url,
+                        ];
+                    }
+
+                }
+                $page++;
+            } while ($total_pages >= $page);
         }
-        while($total_pages >= $page);
-
         return $merchantReportList;
     }
 
