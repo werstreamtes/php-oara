@@ -67,7 +67,7 @@ class LinkShare extends \Oara\Network
                     $site->secureToken = $_ENV['LINKSHARE_SECURITY_TOKEN'];
                 }
                 else {
-                    $site->secureToken = '';;
+                    $site->secureToken = '';
                 }
                 $siteList [] = $site;
                 $this->_siteList = $siteList;
