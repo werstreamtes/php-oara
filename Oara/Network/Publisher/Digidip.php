@@ -283,12 +283,12 @@ class Digidip extends \Oara\Network
 		switch ($transactionJson["status"]){
 			case 'pending':
 			case 'added':
-			case 'received':
 				$transaction['status'] = \Oara\Utilities::STATUS_PENDING;
 				break;
 			case 'denied':
 				$transaction['status'] = \Oara\Utilities::STATUS_DECLINED;
 				break;
+            case 'received':        // Moved "received" status to confirmed group - 2020-09-24 <PN>
 			case 'validated':
 			case 'payment processing':
 			case 'paid':
