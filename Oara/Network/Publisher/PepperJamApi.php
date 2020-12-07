@@ -212,7 +212,7 @@ class PepperJamApi extends \Oara\Network
                 case "delayed":
                     $transaction["status"] = \Oara\Utilities::STATUS_PENDING;
                     break;
-                case "lock":
+                case "locked":
                     $transaction["status"] = \Oara\Utilities::STATUS_CONFIRMED;
                     break;
                 case "unconfirmed":
