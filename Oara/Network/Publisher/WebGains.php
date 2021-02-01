@@ -34,6 +34,7 @@ class WebGains extends \Oara\Network
     private $_soapClient = null;
     private $_server = null;
     private $_campaignMap = array();
+    private $_credentials = null;
     protected $_sitesAllowed = array();
 
     /**
@@ -46,6 +47,7 @@ class WebGains extends \Oara\Network
             return;
         }
 
+        $this->_credentials = $credentials;
         $this->_user = $credentials['user'];
         $this->_password = $credentials['password'];
         $this->_client = new \Oara\Curl\Access($credentials);
@@ -130,11 +132,13 @@ class WebGains extends \Oara\Network
         $results = $xpath->query('//select[@name="campaignswitchid"]');
         $merchantLines = $results->item(0)->childNodes;
         for ($i = 0; $i < $merchantLines->length; $i++) {
-            $cid = $merchantLines->item($i)->attributes->getNamedItem("value")->nodeValue;
-            $name = $merchantLines->item($i)->nodeValue;
-            if (\count($this->_sitesAllowed) == 0 || \in_array($name, $this->_sitesAllowed)) {
-                if (\is_numeric($cid)) {
-                    $campaingMap[$cid] = $merchantLines->item($i)->nodeValue;
+            if(count($merchantLines->item($i)->attributes) > 0){
+                $cid = $merchantLines->item($i)->attributes->getNamedItem("value")->nodeValue;
+                $name = $merchantLines->item($i)->nodeValue;
+                if (\count($this->_sitesAllowed) == 0 || \in_array($name, $this->_sitesAllowed)) {
+                    if (\is_numeric($cid)) {
+                        $campaingMap[$cid] = $merchantLines->item($i)->nodeValue;
+                    }
                 }
             }
         }
@@ -180,18 +184,50 @@ class WebGains extends \Oara\Network
      */
     public function getMerchantList()
     {
-        $merchantList = Array();
-        foreach ($this->_campaignMap as $campaignKey => $campaignValue) {
-            $merchants = $this->_soapClient->getProgramsWithMembershipStatus($this->_user, $this->_password, $campaignKey);
-            foreach ($merchants as $merchant) {
-                if ($merchant->programMembershipStatusName == 'Live' || $merchant->programMembershipStatusName == 'Joined') {
-                    $merchantList[$merchant->programID]["cid"] = $merchant->programID;
-                    $merchantList[$merchant->programID]["name"] = $merchant->programName;
-                }
+	    /**
+	     * Webgains Programs API
+	     * https://api.webgains.com/2.0/programs
+	     */
+	    $statisticsActions = "https://api.webgains.com/2.0/programs";
+        $merchants = Array();
+	    $key = '';
+        if (isset($this->_credentials['api-key'])) {
+            // Could pass api-key with credentials - <slawn>
+            $key = $this->_credentials['api-key'];
+        }
+	    elseif (isset($_ENV['WEBGAINS_API_KEY'])) {
+            // Fallback to environment variable
+	    	$key = $_ENV['WEBGAINS_API_KEY'];
+	    }
+        else {
+            // No valid key ... return empty array
+            return $merchants;
+        }
+	    foreach ($this->_campaignMap as $campaignID => $campaignValue) {
+	        $ch = curl_init();
+	        curl_setopt($ch, CURLOPT_URL, $statisticsActions . '?key=' . $key .'&campaignid='. $campaignID);
+	        curl_setopt($ch, CURLOPT_POST, false);
+	        curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
 
+	        $curl_results = curl_exec($ch);
+	        curl_close($ch);
+	        $a_merchants = json_decode($curl_results, true);
+            if (isset($a_merchants['code']) && $a_merchants['code'] == 401) {
+                echo "[error] Webgains Authentication Failed in get merchants";
+                return $merchants;
+            }
+            foreach ($a_merchants as $merchantJson) {
+                if (isset($merchantJson["id"])) {
+                    $obj = Array();
+                    $obj['cid'] = $merchantJson["id"];
+                    $obj['name'] = $merchantJson["name"];
+                    $obj['status'] = $merchantJson["status"];
+                    $obj['url'] = $merchantJson["homepageURL"];
+                    $merchants[] = $obj;
+                }
             }
         }
-        return $merchantList;
+        return $merchants;
     }
 
 
@@ -206,7 +242,7 @@ class WebGains extends \Oara\Network
     {
         $totalTransactions = Array();
 
-        $merchantListIdList = \Oara\Utilities::getMerchantIdMapFromMerchantList($merchantList);
+        //$merchantListIdList = \Oara\Utilities::getMerchantIdMapFromMerchantList($merchantList);
 
         foreach ($this->_campaignMap as $campaignKey => $campaignValue) {
             try {

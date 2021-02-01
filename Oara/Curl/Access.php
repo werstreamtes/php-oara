@@ -282,7 +282,7 @@ class Access
                 $ch = $done ['handle'];
                 $chId = ( int )$ch;
                 $done_content = \curl_multi_getcontent($ch);
-                if ($done_content == false) {
+                if ($done_content === false) {
                     if ($deep == 5) {
                         throw new \Exception ('Fail in CURL access in GET, getcontent');
                     }

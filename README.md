@@ -81,6 +81,7 @@ The list of supported networks for Publishers so far is:
 * ParkAndGo
 * PayMode
 * PepperJam
+* PepperJam with api
 * PerformanceHorizon
 * PostAffiliatePro
 * PrivateInternetAccess

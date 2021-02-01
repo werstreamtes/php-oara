@@ -35,15 +35,32 @@ class CommissionJunction extends \Oara\Network
     private $_accountId = null;
     private $_apiPassword = null;
     protected $_sitesAllowed = array ();
+    private $_requestor_cid = null;
+
+
+    /*
+     * ATTENTION - IMPORTANT UPDATES - 2019-03-22 by <PN>
+     * CJ REST API is now DEPRECATED and will be removed on June 1, 2019
+     * In the meanwhile, old functions calls using the previously generated DEVELOPER_KEYs in the header continue working,
+     * but for new created accounts you cannot generate a new developer key, but only a PERSONAL ACCESS TOKEN.
+     * REST API could use the Personal Access Tokens by sending it in the header as "Authorization: Bearer XXXXXXX ... "
+     * The api call need a NEW MANDATORY PARAMETER called "requestor-cid" that represent the COMPANY ID in the CJ account dashboard.
+     *
+     * CHANGES TO THIS CLASS:
+     * - $this->_website_id (not used) is now replaced by $this->_requestor_cid
+     * - If $credentials['id_site'] is passed to login() and it's not empty, it will be used in the Api function calls, and the
+     *   $credentials['apipassword'] will be used as a Personal Access Token and sent in header as "Authorization: Bearer xxxx..."
+     * - If $credentials['id_site'] is missing or empty, it will not be used, and the $credentials['apipassword'] will be
+     *   used as a Developer Key and sent in header as simple "Authorization: xxxx..."
+     */
 
     /**
      * @param $credentials
      */
     public function login($credentials)
     {
-        $this->_apiPassword = $credentials['apipassword'];
-
-        $this->_website_id = $credentials['id_site'];
+        $this->_apiPassword = @$credentials['apipassword'];
+        $this->_requestor_cid = @$credentials['id_site'];
     }
 
     /**
@@ -75,28 +92,6 @@ class CommissionJunction extends \Oara\Network
     {
         $connection = true;
 
-        /*$cookieMap = array();
-        $cookieContent = $this->_client->getCookies();
-        $cookieArray = \explode("\n", $cookieContent);
-        for ($i = 4; $i < \count($cookieArray); $i++) {
-            $cookieValue = \explode("\t", $cookieArray[$i]);
-            if (\count($cookieValue) == 7) {
-                $cookieMap[$cookieValue[\count($cookieValue) - 2]] = $cookieValue[\count($cookieValue) - 1];
-            }
-        }
-
-        if (isset($cookieMap["jsContactId"])) {
-            $this->_memberId = $cookieMap["jsContactId"];
-        } else {
-            return false;
-        }
-
-        if (isset($cookieMap["jsCompanyId"])) {
-            $this->_accountId = $cookieMap["jsCompanyId"];
-        } else {
-            return false;
-        }*/
-
         $result = self::apiCall('https://commission-detail.api.cj.com/v3/commissions?date-type=event');
         if ($result===false || \preg_match("/error/", $result)) {
             return false;
@@ -108,12 +103,34 @@ class CommissionJunction extends \Oara\Network
     private function apiCall($url)
     {
         $ch = curl_init();
+        if (!empty($this->_requestor_cid)) {
+            if (strpos($url, 'requestor-cid') === false) {
+                // 2019-03-22 <PN> see notes on top of this source
+                // Add cid parameter to url
+                $pos = strpos($url, '?');
+                if ($pos === false) {
+                    // The only parameter
+                    $url = $url . '?requestor-cid=' . $this->_requestor_cid;
+                }
+                else {
+                    // Prepend to first parameter
+                    $url = substr($url,0, $pos+1) . 'requestor-cid=' . $this->_requestor_cid . '&' . substr($url,$pos + 1);
+                }
+            }
+        }
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_POST, FALSE);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array("Authorization: " . $this->_apiPassword));
+        if (!empty($this->_requestor_cid)) {
+            // 2019-03-22 <PN> see notes on top of this source
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array("Authorization: Bearer " . $this->_apiPassword));
+        }
+        else {
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array("Authorization: " . $this->_apiPassword));
+        }
+
         $curl_results = curl_exec($ch);
         curl_close($ch);
         return $curl_results;
@@ -130,6 +147,10 @@ class CommissionJunction extends \Oara\Network
             $obj = Array();
             $obj['cid'] = $merchantData[0];
             $obj['name'] = $merchantData[1];
+            // Added more info - 2018-04-23 <PN>
+            $obj['status'] = $merchantData[2];
+            $obj['relationship_status'] = $merchantData[3];
+            $obj['url'] = $merchantData[4];
             $merchants[] = $obj;
         }
         return $merchants;
@@ -169,13 +190,14 @@ class CommissionJunction extends \Oara\Network
             }
         }*/
         $page=1;
-        $per_page=100;
-        $total_pages=1;
+        $per_page = 100;
+        $total_pages = 99;
         do{
-            if ($page>3){
+            if ($page > $total_pages){
                 exit;
             }
-            $response = self::apiCall('https://advertiser-lookup.api.cj.com/v3/advertiser-lookup?advertiser-ids=joined&records-per-page='.$per_page.'&page-number='.$page);
+            // Get All programs even if not active - 2018-04-23 <PN>
+            $response = self::apiCall('https://advertiser-lookup.api.cj.com/v3/advertiser-lookup?advertiser-ids=&records-per-page='.$per_page.'&page-number='.$page);
             $xml = \simplexml_load_string($response, null, LIBXML_NOERROR | LIBXML_NOWARNING);
             if (!isset($xml->advertisers)) {
                 break;
@@ -190,17 +212,28 @@ class CommissionJunction extends \Oara\Network
 
                     if ($key=='advertiser-id'){
                         $adv_id=(string)$value;
-
                     }
                     if ($key=='advertiser-name'){
                         $adv_name=(string)$value;
-
+                    }
+                    // Added more info - 2018-04-23 <PN>
+                    if ($key=='account-status'){
+                        $adv_status=(string)$value;
+                    }
+                    if ($key=='relationship-status'){
+                        $adv_relationship_status=(string)$value;
+                    }
+                    if ($key=='program-url'){
+                        $adv_url=(string)$value;
                     }
                 }
                 if (trim($adv_id)!='' && trim($adv_name)!=''){
                     $merchantReportList[]=[
                         $adv_id,
                         $adv_name,
+                        $adv_status,
+                        $adv_relationship_status,
+                        $adv_url,
                     ] ;
                 }
 
@@ -323,7 +356,6 @@ class CommissionJunction extends \Oara\Network
                             $transaction['custom_id'] = self::findAttribute($singleTransaction, 'sid');
                         }
 
-                        //$transaction['unique_id'] = self::findAttribute($singleTransaction, 'commission-id');
                         $transaction ['amount'] = \Oara\Utilities::parseDouble(self::findAttribute($singleTransaction, 'sale-amount'));
                         $transaction ['commission'] = \Oara\Utilities::parseDouble(self::findAttribute($singleTransaction, 'commission-amount'));
 
@@ -339,15 +371,20 @@ class CommissionJunction extends \Oara\Network
                             $transaction ['status'] = \Oara\Utilities::STATUS_PENDING;
                         }
 
+                        /*
+                        // Negative commission must be subtracted by original commission identified by the same 'original-action-id' field - 2018-07-13 <PN>
+                        // Only if result is zero the commission could be set DECLINED. This logic must be implemented by the caller!
                         if ($transaction ['amount'] < 0 || $transaction ['commission'] < 0) {
                             $transaction ['status'] = \Oara\Utilities::STATUS_DECLINED;
                             $transaction ['amount'] = \abs($transaction ['amount']);
                             $transaction ['commission'] = \abs($transaction ['commission']);
                         }
+                        */
                         $transaction ['aid'] = self::findAttribute($singleTransaction, 'aid');
-                        //$transaction ['commission-id'] = self::findAttribute($singleTransaction, 'commission-id');
                         $transaction ['order-id'] = self::findAttribute($singleTransaction, 'order-id');
-                        $transaction ['original'] = self::findAttribute($singleTransaction, 'original');
+                        $transaction ['original'] = (self::findAttribute($singleTransaction, 'original') === 'true');
+                        // 'original-action-id' is used as reference field between original commission and adjust/correction commission - 2018-07-13 <PN>
+                        $transaction ['original-action-id'] = self::findAttribute($singleTransaction, 'original-action-id');
                         $totalTransactions[] = $transaction;
                     }
                 }
@@ -355,8 +392,16 @@ class CommissionJunction extends \Oara\Network
         }
         else {
             if ($xml->count() > 0) {
-                foreach($xml->children() as $key => $value) {
-                    echo $key .  ": " . (string) $value . PHP_EOL;
+                if (isset($xml->title)) {
+                    echo "[ERROR][CJ] " . (string) $xml->title . PHP_EOL;
+                }
+                foreach($xml->children() as $child) {
+                    $key = $child->getName();
+                    $value = $child->attributes();
+                    echo "[WARNING][CJ] " . $key .  ": " . (string) $value . PHP_EOL;
+                    foreach ($child->children() AS $subkey => $value) {
+                        echo "[WARNING][CJ] " . $subkey .  ": " . (string) $value . PHP_EOL;
+                    }
                 }
             }
         }

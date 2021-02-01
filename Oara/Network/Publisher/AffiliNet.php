@@ -109,10 +109,12 @@ class AffiliNet extends \Oara\Network
                 $obj = array();
                 $obj['cid'] = $merchant->ProgramId;
                 $obj['name'] = $merchant->ProgramTitle;
+                // Added more info - 2018-04-20 <PN>
                 $obj['url'] = $merchant->Url;
+                $obj['status'] = $merchant->PartnershipStatus ?? null;
+                $obj['launch_date'] = $merchant->LaunchDate;
                 $merchantListResult[] = $obj;
             }
-
         } else {
             $merchantListResult = array();
         }
@@ -137,14 +139,20 @@ class AffiliNet extends \Oara\Network
 
         while ($voucherRead < $totalResults && $currentPage < 9) {
             $voucherList = self::affilinetCall('voucher', $publisherInboxService, $params, 0, $currentPage);
-            $totalResults = $voucherList->TotalResults;
-            $vouchers = $voucherList->VoucherCodeCollection->VoucherCodeItem;
-            $voucherRead += count($vouchers);
-            $currentPage++;
+            if (isset($voucherList->TotalResults) && isset($voucherList->VoucherCodeCollection) && isset($voucherList->VoucherCodeCollection->VoucherCodeItem)){
+	            $totalResults = $voucherList->TotalResults;
+	            $vouchers = $voucherList->VoucherCodeCollection->VoucherCodeItem;
+	            $voucherRead += count($vouchers);
+	            $currentPage++;
 
-            foreach($vouchers as $voucherItem) {
-                $vouchersListResult[] = $voucherItem;
+	            foreach($vouchers as $voucherItem) {
+		            $vouchersListResult[] = $voucherItem;
+	            }
             }
+            else{
+	            return $vouchersListResult;
+            }
+
         }
         return $vouchersListResult;
     }
@@ -255,6 +263,75 @@ class AffiliNet extends \Oara\Network
         }
         $this->_paymentHistory = $paymentHistory;
         return $paymentHistory;
+    }
+
+    public function paymentTransactions($paymentId) {
+
+        $payments = $this->getPaymentHistory();
+        $dEndDate = '';
+        $dStartDate = '';
+        foreach ($payments as $index => $payment) {
+            if ($payment['pid'] == $paymentId) {
+                $dEndDate = new \DateTime(date("Y-m-d H:i:s", strtotime($payment['date'])));
+                $dStartDate = new \DateTime(date("Y-m-d H:i:s", strtotime($payments[$index + 1]['date']) + 60  * 60 * 24));
+                break;
+            }
+        }
+
+        $totalTransactions = array();
+
+        $publisherStatisticsServiceUrl = 'https://api.affili.net/V2.0/PublisherStatistics.svc?wsdl';
+        $publisherStatisticsService = new \SoapClient($publisherStatisticsServiceUrl, array('compression' => SOAP_COMPRESSION_ACCEPT | SOAP_COMPRESSION_GZIP | SOAP_COMPRESSION_DEFLATE, 'soap_version' => SOAP_1_1));
+
+        $params = array(
+            'StartDate' => \strtotime($dStartDate->format("Y-m-d")),
+            'EndDate' => \strtotime($dEndDate->format("Y-m-d")),
+            'TransactionStatus' => 'Confirmed',
+            'SubId' => '',
+            'ProgramTypes' => 'All',
+            'ValuationType' => 'DateOfConfirmation',
+            'MaximumRecords' => '1000',
+        );
+
+        $currentPage = 1;
+        $transactionList = self::affilinetCall('transaction', $publisherStatisticsService, $params, 0, $currentPage);
+
+        while (isset($transactionList->TotalRecords) && $transactionList->TotalRecords > 0 && isset($transactionList->TransactionCollection->Transaction)) {
+            $transactionCollection = array();
+            if (!\is_array($transactionList->TransactionCollection->Transaction)) {
+                $transactionCollection[] = $transactionList->TransactionCollection->Transaction;
+            } else {
+                $transactionCollection = $transactionList->TransactionCollection->Transaction;
+            }
+
+            foreach ($transactionCollection as $transactionObject){
+
+                $transaction = array();
+                $transaction["status"] = $transactionObject->TransactionStatus;
+                $transaction["unique_id"] = $transactionObject->TransactionId;
+                $transaction["commission"] = $transactionObject->PublisherCommission;
+                $transaction["amount"] = $transactionObject->NetPrice;
+                $dateString = \explode (".", $transactionObject->RegistrationDate);
+                $transactionDate = \DateTime::createFromFormat("Y-m-d\TH:i:s", $dateString[0]);
+                $transaction["date"] = $transactionDate->format("Y-m-d H:i:s");
+                $transaction["merchantId"] = $transactionObject->ProgramId;
+                $transaction["custom_id"] = $transactionObject->SubId;
+                if ($transaction['status'] == 'Confirmed') {
+                    $transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
+                } else
+                    if ($transaction['status'] == 'Open') {
+                        $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
+                    } else
+                        if ($transaction['status'] == 'Cancelled') {
+                            $transaction['status'] = \Oara\Utilities::STATUS_DECLINED;
+                        }
+                $totalTransactions[] = $transaction;
+            }
+            $currentPage++;
+            $transactionList = self::affilinetCall('transaction', $publisherStatisticsService, $params, 0, $currentPage);
+        }
+
+        return $totalTransactions;
     }
 
     /**

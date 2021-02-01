@@ -52,6 +52,38 @@ class Utilities
      */
     const STATUS_PAID = 'paid';
 
+	/**
+	 * sales type sale
+	 * @var string
+	 */
+    const TYPE_SALE = 'sale';
+	/**
+	 * sales type bonus
+	 * @var string
+	 */
+    const TYPE_BONUS = 'bonus';
+	/**
+	 * sales type lead
+	 * @var string
+	 */
+    const TYPE_LEAD = 'lead';
+	/**
+	 * sales type click
+	 * @var string
+	 */
+    const TYPE_CLICK = 'click';
+	/**
+	 * sales type impression
+	 * @var string
+	 */
+    const TYPE_IMPRESSION = 'impression';
+	/**
+	 * sales type performance increase
+	 * @var string
+	 */
+    const TYPE_PERFORMANCE_INCREASE = 'performance_increase';
+
+
 
     /**
      * offer type Voucher
@@ -108,7 +140,10 @@ class Utilities
             $bits = \explode(",", \trim($data)); // split input value up to allow checking
             $last = \strlen($bits[\count($bits) - 1]); // gets part after first comma (thousands (or decimals if incorrectly used by user)
             if ($last < 3) { // checks for comma being used as decimal place
-                $convertnum = \str_replace(",", ".", \trim($data));
+                // Remove any point used as thousand separator - 2019-01-25 <PN>
+                $convertnum = \str_replace(".", "", \trim($data));
+                // Replace comma with decimal point
+                $convertnum = \str_replace(",", ".", $convertnum);
             } else {
                 $convertnum = \str_replace(",", "", \trim($data));
             }

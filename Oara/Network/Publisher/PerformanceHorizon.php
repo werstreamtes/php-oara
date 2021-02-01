@@ -22,7 +22,7 @@ namespace Oara\Network\Publisher;
 /**
  * Export Class
  *
- * @author     Carlos Morillo Merino
+ * @author     Carlos Morillo Merino - Updated by Paolo Nardini on 2019-Feb-04
  * @category   PerformanceHorizon
  * @copyright  Fubra Limited
  * @version    Release: 01.00
@@ -104,11 +104,10 @@ class PerformanceHorizon extends \Oara\Network
                 $obj = Array();
                 $obj['cid'] = \str_replace("l", "", $merchant["campaign_id"]);
                 $obj['name'] = $merchant["title"];
+                $obj['status'] = $merchant['publisher_status'];
                 $merchants[] = $obj;
             }
-
         }
-
         return $merchants;
     }
 
@@ -123,18 +122,27 @@ class PerformanceHorizon extends \Oara\Network
         $transactions = array();
         $merchantIdList = \Oara\Utilities::getMerchantIdMapFromMerchantList($merchantList);
 
+        if (is_null($this->_publisherList)) {
+            $result = \file_get_contents("https://{$this->_pass}@api.performancehorizon.com/user/account.json");
+            $publisherList = \json_decode($result, true);
+            foreach ($publisherList["user_accounts"] as $publisher) {
+                if (isset($publisher["publisher"])) {
+                    $publisher = $publisher["publisher"];
+                    $this->_publisherList[$publisher["publisher_id"]] = $publisher["account_name"];
+                }
+            }
+        }
+
         foreach ($this->_publisherList as $publisherId => $publisherName) {
             $page = 0;
-            $import = true;
-            while ($import) {
-
-                $offset = ($page * 300);
-
+            $limit = 300;
+            while (true) {
+                $offset = ($page * $limit);
                 $url = "https://{$this->_pass}@api.performancehorizon.com/reporting/report_publisher/publisher/$publisherId/conversion.json?";
-                $url .= "status=approved|mixed|pending|rejected";
                 $url .= "&start_date=" . \urlencode($dStartDate->format("Y-m-d H:i"));
                 $url .= "&end_date=" . \urlencode($dEndDate->format("Y-m-d H:i"));
                 $url .= "&offset=" . $offset;
+                $url .= "&limit=" . $limit;
 
                 $result = \file_get_contents($url);
                 $conversionList = \json_decode($result, true);
@@ -142,41 +150,37 @@ class PerformanceHorizon extends \Oara\Network
                 foreach ($conversionList["conversions"] as $conversion) {
                     $conversion = $conversion["conversion_data"];
                     $conversion["campaign_id"] = \str_replace("l", "", $conversion["campaign_id"]);
-                    if (isset($merchantIdList[$conversion["campaign_id"]])) {
-
-                        if (\count($this->_sitesAllowed) == 0 || \in_array($conversion["campaign_id"], $this->_sitesAllowed)){
-                            $transaction = array();
-                            $transaction['unique_id'] = $conversion["conversion_id"];
-                            $transaction['merchantId'] = $conversion["campaign_id"];
-                            $transaction['date'] = $conversion["conversion_time"];
-                            if ($conversion["publisher_reference"] != null) {
-                                $transaction['custom_id'] = $conversion["publisher_reference"];
-                            }
-                            if ($conversion["conversion_value"]["conversion_status"] == 'approved') {
-                                $transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
-                            } else
-                                if ($conversion["conversion_value"]["conversion_status"] == 'pending' || $conversion["conversion_value"]["conversion_status"] == 'mixed') {
-                                    $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
-                                } else
-                                    if ($conversion["conversion_value"]["conversion_status"] == 'rejected') {
-                                        $transaction['status'] = \Oara\Utilities::STATUS_DECLINED;
-                                    }
-
-                            $transaction['amount'] = $conversion["conversion_value"]["value"];
-                            $transaction['currency'] = $conversion["currency"];
-
-                            $transaction['commission'] = $conversion["conversion_value"]["publisher_commission"];
-                            $transactions[] = $transaction;
+                    if (\count($this->_sitesAllowed) == 0 || \in_array($conversion["campaign_id"], $this->_sitesAllowed)){
+                        $transaction = array();
+                        $transaction['unique_id'] = $conversion["conversion_id"];
+                        $transaction['merchantId'] = $conversion["campaign_id"];
+                        $transaction['date'] = $conversion["conversion_time"];
+                        if ($conversion["publisher_reference"] != null) {
+                            $transaction['custom_id'] = $conversion["publisher_reference"];
                         }
+                        if ($conversion["conversion_value"]["conversion_status"] == 'approved') {
+                            $transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
+                        } else
+                            if ($conversion["conversion_value"]["conversion_status"] == 'pending' || $conversion["conversion_value"]["conversion_status"] == 'mixed') {
+                                $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
+                            } else
+                                if ($conversion["conversion_value"]["conversion_status"] == 'rejected') {
+                                    $transaction['status'] = \Oara\Utilities::STATUS_DECLINED;
+                                }
+
+                        $transaction['amount'] = $conversion["conversion_value"]["value"];
+                        $transaction['currency'] = $conversion["currency"];
+
+                        $transaction['commission'] = $conversion["conversion_value"]["publisher_commission"];
+                        $transactions[] = $transaction;
                     }
                 }
 
-
-                if (((int)$conversionList["count"]) < $offset) {
-                    $import = false;
+                if (((int)$conversionList["count"]) < ($offset+$limit)) {
+                    // Reached the total number of transactions
+                    break;
                 }
                 $page++;
-
             }
         }
 
