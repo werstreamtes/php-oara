@@ -24,71 +24,71 @@ use Oara\Utilities;
 
 class Inis extends \Oara\Network
 {
-	private $_user_id = null;
-	private $_api_password = null;
+    private $_user_id = null;
+    private $_api_password = null;
 
-	/**
-	 * API URL
-	 * @var string
-	 */
-	protected $_apiUrl = 'https://system.inis360.com/api-publisher/v1.0';
+    /**
+     * API URL
+     * @var string
+     */
+    protected $_apiUrl = 'https://system.inis360.com/api-publisher/v1.0';
 
 
-	/**
-	 * @param $credentials
-	 * @throws Exception
-	 */
-	public function login($credentials)
-	{
+    /**
+     * @param $credentials
+     * @throws Exception
+     */
+    public function login($credentials)
+    {
         $this->_user_id = $credentials['user'];
         $this->_api_password = $credentials['password'];
-	}
+    }
 
 
 
-	/**
-	 * @return array
-	 */
-	public function getNeededCredentials()
-	{
-		$credentials = array();
+    /**
+     * @return array
+     */
+    public function getNeededCredentials()
+    {
+        $credentials = array();
 
-		$parameter = array();
-		$parameter["description"] = "User Log in";
-		$parameter["required"] = true;
-		$parameter["name"] = "User";
-		$credentials["user"] = $parameter;
+        $parameter = array();
+        $parameter["description"] = "User Log in";
+        $parameter["required"] = true;
+        $parameter["name"] = "User";
+        $credentials["user"] = $parameter;
 
-		$parameter = array();
-		$parameter["description"] = "Password to Log in";
-		$parameter["required"] = true;
-		$parameter["name"] = "Password";
-		$credentials[] = $parameter;
+        $parameter = array();
+        $parameter["description"] = "Password to Log in";
+        $parameter["required"] = true;
+        $parameter["name"] = "Password";
+        $credentials[] = $parameter;
 
-		return $credentials;
-	}
+        return $credentials;
+    }
 
-	/**
-	 * @return bool
-	 */
-	public function checkConnection()
-	{
-		$connection = true;
-		return $connection;
-	}
+    /**
+     * @return bool
+     */
+    public function checkConnection()
+    {
+        $connection = true;
+        return $connection;
+    }
 
 
 
-	/**
-	 * @param null $merchantList
-	 * @param \DateTime|null $dStartDate
-	 * @param \DateTime|null $dEndDate
-	 * @return array
-	 * @throws \Exception
-	 */
-	public function getTransactionList($merchantList = null, \DateTime $dStartDate = null, \DateTime $dEndDate = null)
-	{
-		/**
+    /**
+     * @param null $merchantList
+     * @param \DateTime|null $dStartDate
+     * @param \DateTime|null $dEndDate
+     * @return array
+     * @throws \Exception
+     */
+    public function getTransactionList($merchantList = null, \DateTime $dStartDate = null, \DateTime $dEndDate = null)
+    {
+        /**
          * https://system.inis360.com/api-publisher/v1.0/programs/XX/actions?secureCode=XX&count=1000
          */
         $totalTransactions = array();
@@ -96,129 +96,152 @@ class Inis extends \Oara\Network
             $programs = $_ENV['INIS_PROGRAMS'];
             $a_programs = explode(",", $programs);
             foreach ($a_programs as $program_id) {
-                try{
-                    $start_date = $dStartDate->getTimestamp();
-                    $end_date = $dEndDate->getTimestamp();
-                    $page = 1;
-                    $limit = 1000;
-                    $loop = true;
+                $start_date = $dStartDate->getTimestamp();
+                $end_date = $dEndDate->getTimestamp();
+                $page = 1;
+                $limit = 10;
+                $loop = true;
+                $count_transaction_program = 0;
 
-                    while ($loop){
-                        $transactionsList = $this->_requestTransactions(
-                            'programs',
-                            $program_id,
-                            'actions',
-                            array(
-                                'from' => $start_date, //format timestamp
-                                'to' => $end_date, //format timestamp
-                                'secureCode' => $this->_api_password,
-                                'page' => $page, //Specifies the page of the results set that is currently being viewed.(default:1)
-                                'count' => $limit, //Specifies the number of records to be viewed per page.(default:50)
-                            )
-                        );
-                        if (isset($transactionsList['actions'])){
-                            if (empty($transactionsList['actions'])) {
-                                $loop = false;
-                                break;
+                while ($loop){
+                    $transactionsList = $this->_requestTransactions(
+                        'programs',
+                        $program_id,
+                        'actions',
+                        array(
+                            'from' => $start_date, //format timestamp
+                            'to' => $end_date, //format timestamp
+                            'secureCode' => $this->_api_password,
+                            'page' => $page, //Specifies the page of the results set that is currently being viewed.(default:1)
+                            'count' => $limit, //Specifies the number of records to be viewed per page.(default:50)
+                        )
+                    );
+                    if (isset($transactionsList['actions'])){
+                        if (empty($transactionsList['actions'])) {
+                            $loop = false;
+                            break;
+                        }
+                        foreach ($transactionsList['actions'] as $transaction) {
+                            $a_transaction = [];
+                            $a_transaction['unique_id'] = $transaction['guid'];
+                            $a_transaction['date'] = new \DateTime();
+                            $a_transaction['date']->setTimestamp($transaction['time']); //microtimestamp - float
+                            $a_transaction['custom_id'] = $transaction['subId1'];
+                            $a_transaction['commission'] = Utilities::parseDouble($transaction['profit']);
+                            //currency
+                            $a_transaction['currency'] = 'PLN';
+                            //type
+                            if (isset($transaction['type']) && $transaction['type'] != 3){
+                                echo '[php-oara][Oara][Network][Publisher][Inis][getTransactionList] Transaction type unexpected ' . $transaction['type'] . PHP_EOL;
                             }
-                            foreach ($transactionsList['actions'] as $transaction) {
-                                $a_transaction['unique_id'] = $transaction['guid'];
-                                $a_transaction['date'] = new \DateTime();
-                                $a_transaction['date']->setTimestamp($transaction['time']); //microtimestamp - float
-                                $a_transaction['custom_id'] = $transaction['subId1'];
-                                $a_transaction['commission'] = Utilities::parseDouble($transaction['profit']);
-                                //currency
-                                $a_transaction['currency'] = 'PLN';
-                                //type
-                                if (isset($transaction['type']) && $transaction['type'] != 3){
-                                    echo '[php-oara][Oara][Network][Publisher][Inis][getTransactionList] Transaction type unexpected ' . $transaction['type'];
-                                }
-                                if (isset($transaction['actionValue'])){
-                                    //This field is only returned for conversions - Actions with type = 3 Action type (1 - click, 2 - kik, 3 - conversion / sale)
-                                    $a_transaction['amount'] = Utilities::parseDouble($transaction['actionValue']);
-                                }
-                                switch ($transaction['status']){
-                                    case 0:
-                                        $a_transaction['status'] = Utilities::STATUS_PENDING;
-                                        break;
-                                    case 2:
-                                        $a_transaction['status'] = Utilities::STATUS_DECLINED;
-                                        break;
-                                    case 1:
-                                        $a_transaction['status'] = Utilities::STATUS_CONFIRMED;
-                                        break;
-                                }
-                                $totalTransactions[] = $a_transaction;
+                            if (isset($transaction['actionValue'])){
+                                //This field is only returned for conversions - Actions with type = 3 Action type (1 - click, 2 - kik, 3 - conversion / sale)
+                                $a_transaction['amount'] = Utilities::parseDouble($transaction['actionValue']);
                             }
-                            if (!isset($transactionsList['nextPageUrl']) || empty($transactionsList['nextPageUrl'])) {
-                                //string|null
-                                $loop = false;
-                                break;
+                            switch ($transaction['status']){
+                                case 0:
+                                    $a_transaction['status'] = Utilities::STATUS_PENDING;
+                                    break;
+                                case 2:
+                                    $a_transaction['status'] = Utilities::STATUS_DECLINED;
+                                    break;
+                                case 1:
+                                    $a_transaction['status'] = Utilities::STATUS_CONFIRMED;
+                                    break;
                             }
-                            else{
-                                $page = (int)(1 + $page);
-                            }
+                            $count_transaction_program++;
+                            $totalTransactions[] = $a_transaction;
+                        }
+                        if (!isset($transactionsList['nextPageUrl']) || empty($transactionsList['nextPageUrl'])) {
+                            //string|null
+                            $loop = false;
+                            break;
+                        }
+                        else{
+                            $page = (int)(1 + $page);
                         }
                     }
                 }
-                catch (\Exception $e){
-                    throw new \Exception($e);
-                }
+                echo '[php-oara][Oara][Network][Publisher][Inis][getTransactionList] program id ' . $program_id . ' num transactions ' . $count_transaction_program . PHP_EOL;
             }
         }
         else{
             throw new \Exception('[Inis][getTransactionList] INIS_PROGRAMS empty key');
         }
-		return $totalTransactions;
+        return $totalTransactions;
 
-	}
+    }
 
 
-	/**
-	 * @return string
-	 */
-	protected function _getApiBaseUrl() {
-		return $this->_apiUrl;
-	}
+    /**
+     * @return string
+     */
+    protected function _getApiBaseUrl() {
+        return $this->_apiUrl;
+    }
 
 
     /**
      * @param $service
+     * @param $program_id
      * @param $call
      * @param array $a_options
      * @return false|\stdClass|string
      * @throws \Exception
      */
     protected function _requestTransactions($service, $program_id, $call, $a_options) {
-        $url = $this->_getApiBaseUrl() . '/' . $service . '/' . $program_id . '/' . $call . '?';
+        $num_of_attempts = 5;
+        $attempts = 0;
+        do {
+            $url = $this->_getApiBaseUrl() . '/' . $service . '/' . $program_id . '/' . $call . '?';
+            foreach ($a_options as $key => $value) {
+                $url .= '&' . $key . '=' . $value;
+            }
+            echo '[php-oara][Oara][Network][Publisher][Inis][_requestTransactions] url ' . $url . PHP_EOL;
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_POST, false);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
 
-        foreach ($a_options as $key => $value) {
-            $url .= '&' . $key . '=' . $value;
-        }
+            $curl_results = curl_exec($ch);
+            $error = curl_errno($ch);
+            $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            if ($http_code == 200) {
+                curl_close($ch);
+                $data = json_decode($curl_results, true);
 
-        $data = file_get_contents($url);
-        if (strlen($data) == 0) {
-            throw new \Exception('[Inis][_requestTransactions] invalid result received');
-        }
+                if (isset($data['actions'])){
+                    return $data;
+                }
+                else {
+                    throw new \Exception('[php-oara][Oara][Network][Publisher][Inis][_requestTransactions] data error: ' .  $data);
+                }
+            } else {
+                // check HTTP status code
+                switch ($http_code) {
+                    case 503:
+                        sleep(30);
+                        break;
+                    default:
+                        throw new \Exception('[php-oara][Oara][Network][Publisher][Inis][_requestTransactions] return status code: ' .  $http_code);
+                        break;
+                }
+            }
+        } while($attempts++ < $num_of_attempts);
 
-        $data = $this->_decode($data);
-        if (isset($data['actions'])){
-            return $data;
-        } else {
-            throw new \Exception($data);
-        }
+        throw new \Exception('[php-oara][Oara][Network][Publisher][Inis][_requestTransactions] error: num of attempts');
     }
 
-	/**
-	 * @param  string $data
-	 * @param  string $format (Optional) Format
-	 * @return \stdClass
-	 */
-	protected function _decode($data, $format = 'json'){
-		if ($format == 'json') {
-			return json_decode($data, true);
-		}
-	}
+    /**
+     * @param  string $data
+     * @param  string $format (Optional) Format
+     * @return \stdClass
+     */
+    protected function _decode($data, $format = 'json'){
+        if ($format == 'json') {
+            return json_decode($data, true);
+        }
+    }
 
 
 
