@@ -99,7 +99,7 @@ class Inis extends \Oara\Network
                 $start_date = $dStartDate->getTimestamp();
                 $end_date = $dEndDate->getTimestamp();
                 $page = 1;
-                $limit = 10;
+                $limit = 1000;
                 $loop = true;
                 $count_transaction_program = 0;
 
