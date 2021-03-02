@@ -150,7 +150,7 @@ class Inis extends \Oara\Network
                                 }
                                 $totalTransactions[] = $a_transaction;
                             }
-                            if (isset($transactionsList['nextPageUrl']) && empty($transactionsList['nextPageUrl'])) {
+                            if (!isset($transactionsList['nextPageUrl']) || empty($transactionsList['nextPageUrl'])) {
                                 //string|null
                                 $loop = false;
                                 break;
