@@ -200,7 +200,8 @@ class Daisycon extends \Oara\Network
 				curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 				// execute curl
 				$response = curl_exec($ch);
-				$transactionList = json_decode($response, true);
+                if (empty($response)) return $totalTransactions;
+                $transactionList = json_decode($response, true);
 
 				foreach ($transactionList as $transaction) {
 					$merchantId = $transaction['program_id'];
