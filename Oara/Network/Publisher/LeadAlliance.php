@@ -17,58 +17,55 @@ namespace Oara\Network\Publisher;
 class LeadAlliance extends \Oara\Network
 {
 
-	private $_credentials = null;
+    private $_credentials = null;
 
-	/**
-	 * @param $credentials
-	 */
-	public function login($credentials)
-	{
-		$this->_credentials = $credentials;
-	}
+    /**
+     * @param $credentials
+     */
+    public function login($credentials)
+    {
+        $this->_credentials = $credentials;
+    }
 
-	/**
-	 * Check the connection
-	 */
-	public function checkConnection()
-	{
-	    // Don't check connection ... just check for valid api keys
+    /**
+     * Check the connection
+     */
+    public function checkConnection()
+    {
+        // Don't check connection ... just check for valid api keys
         if (!isset($_ENV['LEAD_ALLIANCE_PUBLIC']) && !isset($_ENV['LEAD_ALLIANCE_PRIVATE'])) {
             return false;
         }
         return true;
-	}
+    }
 
-	/**
-	 * (non-PHPdoc)
-	 * @see library/Oara/Network/Interface#getMerchantList()
-	 */
-	public function getMerchantList()
-	{
+    /**
+     * (non-PHPdoc)
+     * @see library/Oara/Network/Interface#getMerchantList()
+     */
+    public function getMerchantList()
+    {
         // NOT IMPLEMENTED YET
         $merchants = array();
-		return $merchants;
-	}
+        return $merchants;
+    }
 
-	/**
-	 * @param null $merchantList array of merchants id to retrieve transactions (empty array or null = all merchants)
-	 * @param \DateTime|null $dStartDate
-	 * @param \DateTime|null $dEndDate
-	 * @return array
-	 * @throws \Exception
-	 */
-	public function getTransactionList($merchantList = null, \DateTime $dStartDate = null, \DateTime $dEndDate = null)
-	{
-		$totalTransactions = array();
-
-		// $merchantIdList = \Oara\Utilities::getMerchantIdMapFromMerchantList($merchantList);
-
-		$user = $this->_credentials['user'];
-		$password = $this->_credentials['password'];
+    /**
+     * @param null $merchantList array of merchants id to retrieve transactions (empty array or null = all merchants)
+     * @param \DateTime|null $dStartDate
+     * @param \DateTime|null $dEndDate
+     * @return array
+     * @throws \Exception
+     */
+    public function getTransactionList($merchantList = null, \DateTime $dStartDate = null, \DateTime $dEndDate = null)
+    {
+        $totalTransactions = array();
+        $user = $this->_credentials['user'];
+        $password = $this->_credentials['password'];
 
         // id_site could be used to pass custom api url (white labels merchants using LeadAlliance API)
         // ... example QVC use "https://partner.qvc.de"
-		$id_site = $this->_credentials['id_site'];
+        $id_site = $this->_credentials['id_site'];
 
         if (!empty($id_site) && strpos($id_site, 'http') !== false) {
             // The API custom url is passed with id_site parameter
@@ -94,7 +91,6 @@ class LeadAlliance extends \Oara\Network
             $hash = hash_hmac('sha256', '', $private);
         }
 
-
         $url = $url_endpoint . "/api/v1/index.php/partner/transactions?date=" . $dStartDate->format("Y-m-d") . "&dateend=" . $dEndDate->format("Y-m-d");
         if (!empty($id_site)) {
             // id_site is a specific partner id
@@ -116,56 +112,52 @@ class LeadAlliance extends \Oara\Network
         // execute curl
         $response = curl_exec($ch);
         if (!empty($response)) {
-            if (stripos($response,'error') !== false) {
-                echo "[LeadAlliance][getTransactionList] Error: " . $response ."\n ";
-                return $totalTransactions;
-            }
-        }
-        $transactionList = json_decode($response, true);
-        if (is_array($transactionList) && count($transactionList) > 0) {
-            foreach ($transactionList as $transaction) {
-                $transactionArray = Array();
-                $transactionArray['unique_id'] = $transaction['transactionid'];
-                $transactionArray['merchantId'] = $transaction['programid'];
-                $transactionArray['merchantName'] = $transaction['program'];
-                $date_origin = $transaction['dateorigin'];
-                $time_origin = $transaction['timeorigin'];
-                $transactionArray['date'] = $date_origin . ' ' . $time_origin;
-                $transactionArray['click_date'] = $transaction['timeclick'];
-                $transactionArray['update_date'] = $transaction['dateedit'];
-                $transactionArray['custom_id'] = $transaction['subid'];
-                if ($transaction['status'] == '2') {
-                    $transactionArray['status'] = \Oara\Utilities::STATUS_CONFIRMED;
-                } elseif ($transaction['status'] == '1') {
-                    $transactionArray['status'] = \Oara\Utilities::STATUS_PENDING;
-                } elseif ($transaction['status'] == '0') {
-                    $transactionArray['status'] = \Oara\Utilities::STATUS_DECLINED;
-                } else {
-                    throw new \Exception("Unexpected transaction status {$transaction['status']}");
+            $transactionList = json_decode($response, true);
+            if (is_array($transactionList) && count($transactionList) > 0) {
+                foreach ($transactionList as $transaction) {
+                    $transactionArray = Array();
+                    $transactionArray['unique_id'] = $transaction['transactionid'];
+                    $transactionArray['merchantId'] = $transaction['programid'];
+                    $transactionArray['merchantName'] = $transaction['program'];
+                    $date_origin = $transaction['dateorigin'];
+                    $time_origin = $transaction['timeorigin'];
+                    $transactionArray['date'] = $date_origin . ' ' . $time_origin;
+                    $transactionArray['click_date'] = $transaction['timeclick'];
+                    $transactionArray['update_date'] = $transaction['dateedit'];
+                    $transactionArray['custom_id'] = $transaction['subid'];
+                    if ($transaction['status'] == '2') {
+                        $transactionArray['status'] = \Oara\Utilities::STATUS_CONFIRMED;
+                    } elseif ($transaction['status'] == '1') {
+                        $transactionArray['status'] = \Oara\Utilities::STATUS_PENDING;
+                    } elseif ($transaction['status'] == '0') {
+                        $transactionArray['status'] = \Oara\Utilities::STATUS_DECLINED;
+                    } else {
+                        throw new \Exception("Unexpected transaction status {$transaction['status']}");
+                    }
+                    $transactionArray['currency'] = 'EUR';  // Default value
+                    $transactionArray['amount'] = \Oara\Utilities::parseDouble($transaction['value']);
+                    $transactionArray['commission'] = \Oara\Utilities::parseDouble($transaction['commission']);
+                    $transactionArray['info'] = $transaction['info'];
+                    $transactionArray['statuscomment'] = $transaction['statuscomment'];
+                    $transactionArray['datepayment'] = $transaction['datepayment'];
+                    $transactionArray['category'] = $transaction['category'];
+                    $transactionArray['leadtype'] = $transaction['leadtype'];
+                    $transactionArray['adspaceid'] = $transaction['adspaceid'];
+                    $transactionArray['autookdate'] = $transaction['autookdate'];
+                    $totalTransactions[] = $transactionArray;
                 }
-                $transactionArray['currency'] = 'EUR';  // Default value
-                $transactionArray['amount'] = \Oara\Utilities::parseDouble($transaction['value']);
-                $transactionArray['commission'] = \Oara\Utilities::parseDouble($transaction['commission']);
-                $transactionArray['info'] = $transaction['info'];
-                $transactionArray['statuscomment'] = $transaction['statuscomment'];
-                $transactionArray['datepayment'] = $transaction['datepayment'];
-                $transactionArray['category'] = $transaction['category'];
-                $transactionArray['leadtype'] = $transaction['leadtype'];
-                $transactionArray['adspaceid'] = $transaction['adspaceid'];
-                $transactionArray['autookdate'] = $transaction['autookdate'];
-                $totalTransactions[] = $transactionArray;
             }
         }
-		return $totalTransactions;
-	}
 
-	/**
-	 * See: https://developers.daisycon.com/api/resources/publisher-resources/
-	 * @return array
-	 */
-	public function getVouchers()
-	{
+        return $totalTransactions;
+    }
+
+    /**
+     * @return array
+     */
+    public function getVouchers()
+    {
         throw new \Exception("Not implemented yet");
-	}
+    }
 
 }
