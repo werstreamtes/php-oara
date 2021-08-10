@@ -388,10 +388,12 @@ class LinkShare extends \Oara\Network
                 }
 
                 $exportData = \str_getcsv($result, "\n");
+                $exportData = \str_replace('\""','""',$exportData); // BV-1141 Bad sequence \"" in description
+
                 $num = \count($exportData);
                 for ($j = 1; $j < $num; $j++) {
                     try {
-                        $transactionData = \str_getcsv($exportData [$j], ",");
+                        $transactionData = \str_getcsv($exportData[$j], ',', "\"", '\\');   //BV-1141 added enclosure + escape
 
                         if (count($transactionData) > 10 && (count($merchantIdList)==0 || isset($merchantIdList[$transactionData[3]]))) {
                             if ($transactionData[1] === '' && strpos($transactionData[2],'/') !== false) {
