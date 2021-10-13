@@ -146,13 +146,18 @@ class Publicidees extends \Oara\Network
             //$response = file_get_contents ('http://api.publicidees.com/subid.php5?p='.$this->_user.'&k='.$this->_password.'&dd='.$dStartDate->format('Y-m-d').'&df='.$dEndDate->format('Y-m-d'));
             //$response = file_get_contents ('http://api.publicidees.com/subid.php5?p='.$this->_user.'&k='.$this->_password.'&dd=2019-09-01&df='.$dEndDate->format('Y-m-d'));
 
-            $url = 'http://api.publicidees.com/subid.php5?p='.$this->_user.'&k='.$this->_password.'&dd='.$dStartDate->format('Y-m-d').'&df='.$dEndDate->format('Y-m-d');
+            $url = 'https://api.publicidees.com/subid.php5?p='.$this->_user.'&k='.$this->_password.'&dd='.$dStartDate->format('Y-m-d').'&df='.$dEndDate->format('Y-m-d');
 
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_POST, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
             $response = curl_exec($ch);
+
+            $error = curl_errno($ch);
+            $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
             curl_close($ch);
 
             //error messages returned by api call:
