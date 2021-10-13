@@ -93,6 +93,9 @@ class Adtraction extends \Oara\Network
                              */
                             throwException($transactionList['message']);
                         }
+                        else if (!isset($transaction['uniqueId'])){
+                            continue;
+                        }
                         $transactionArray = Array();
                         $transactionArray['unique_id'] = $transaction['uniqueId'];
                         if (isset($transaction['click'])){
