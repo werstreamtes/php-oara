@@ -116,7 +116,7 @@ class EasyMarketing extends \Oara\Network
 			foreach ($a_dates as $dates) {
 				$dStartDate = $dates[0];
 				$dEndDate = $dates[1];
-				$url_api_transactions = 'https://' . $user . '/api//' . $password . '/publisher/' . $id_site . '/get-statistic_transactions.xml';
+				$url_api_transactions = 'https://' . $user . '/api/' . $password . '/publisher/' . $id_site . '/get-statistic_transactions.xml';
 				$params = array(
 					new \Oara\Curl\Parameter('condition[period][from]', $dStartDate->format('d.m.Y')),
 					new \Oara\Curl\Parameter('condition[period][to]', $dEndDate->format('d.m.Y')),
@@ -128,12 +128,14 @@ class EasyMarketing extends \Oara\Network
 				}
 				$get_params = implode('&', $p);
 				$url = $url_api_transactions . '?' . $get_params;
-				$ch = curl_init();
-				curl_setopt($ch, CURLOPT_URL, $url);
-				curl_setopt($ch, CURLOPT_POST, false);
-				curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-
-				$xml = curl_exec($ch);
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_URL, $url);
+                curl_setopt($ch, CURLOPT_POST, false);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+                $error = curl_errno($ch);
+                $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                $xml = curl_exec($ch);
 				if ($xml == 'NO PERMISSION') {
 					throw new \Exception("[EasyMarketing][getTransactionList][Exception] Check the access token value. " . $xml);
 				} elseif (false == $xml) {
