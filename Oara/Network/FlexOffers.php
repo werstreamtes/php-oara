@@ -62,7 +62,7 @@ class FlexOffers extends \Oara\Network
             $url_endpoint = 'https://api.flexoffers.com/';
             $version = '';
             $page = 1;
-            $limit = 12;
+            $limit = 500;
             $loop = true;
 
             while ($loop){
@@ -73,7 +73,7 @@ class FlexOffers extends \Oara\Network
                     new \Oara\Curl\Parameter('reportType', 'sales'),
                     new \Oara\Curl\Parameter('page', $page),
                     new \Oara\Curl\Parameter('pageSize', $limit), //Specify the maximum number of records to be retrieved per page. This value must be between 1 and 500.
-                    new \Oara\Curl\Parameter('status', 'all'),
+                    new \Oara\Curl\Parameter('status', 'pending'),
                     // Sales will be filtered based on Status. If 'all' is selected, overall sales appear in result.
                     //status all or other statuses individually: pending, approved, canceled, bonus or non-commissionable
                 );
