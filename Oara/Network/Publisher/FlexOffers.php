@@ -64,16 +64,20 @@ class FlexOffers extends \Oara\Network
             $page = 1;
             $limit = 500;
             $loop = true;
+            $status = 'all';
+            $attempts = 0;
 
             while ($loop){
                 $url = $url_endpoint . $version . "allsales";
+                $dStartDate->setTimezone(new \DateTimeZone('EST'));
+                $dEndDate->setTimezone(new \DateTimeZone('EST'));
                 $params = array(
                     new \Oara\Curl\Parameter('startDate', $dStartDate->format("c")), //2021-09-01T07:35:07+0000
                     new \Oara\Curl\Parameter('endDate', $dEndDate->format("c")), //Specifies the upper bound of the date range, defaults to today if not specified.
                     new \Oara\Curl\Parameter('reportType', 'sales'),
                     new \Oara\Curl\Parameter('page', $page),
                     new \Oara\Curl\Parameter('pageSize', $limit), //Specify the maximum number of records to be retrieved per page. This value must be between 1 and 500.
-                    new \Oara\Curl\Parameter('status', 'pending'),
+                    new \Oara\Curl\Parameter('status', $status),
                     // Sales will be filtered based on Status. If 'all' is selected, overall sales appear in result.
                     //status all or other statuses individually: pending, approved, canceled, bonus or non-commissionable
                 );
@@ -105,14 +109,26 @@ class FlexOffers extends \Oara\Network
                 curl_close($ch);
                 if (!empty($response)) {
                     $transactionList = json_decode($response, true);
-                    if ($http_code == 429){
+                    if ($http_code == 429 && $attempts < 5){
                         //too many requests - try again in 30 seconds
+                        sleep(30);
+                        $attempts++;
+                        continue;
+                    }
+                    elseif (5 == $attempts){
                         throw new \Exception("[FlexOffers][getTransactionList][Exception] 429  Too many requests " . $response);
                     }
                     if (is_array($transactionList) && count($transactionList) > 0) {
                         if ($http_code == 400 || $http_code == 405){
                             if (isset($transactionList['message'])){
-                                throw new \Exception("[FlexOffers][getTransactionList][Exception] " . $transactionList['message']);
+                                if (400 == $http_code && str_contains($transactionList['message'], "All status is currently under maintenance")){
+                                    $status = 'pending';
+                                    sleep(30);
+                                    continue;
+                                }
+                                else{
+                                    throw new \Exception("[FlexOffers][getTransactionList][Exception] " . $transactionList['message']);
+                                }
                             }
                         }
                         foreach ($transactionList['results'] as $transaction) {
@@ -120,22 +136,23 @@ class FlexOffers extends \Oara\Network
                             $transactionArray['unique_id'] = $transaction['legacyId'];
                             if (isset($transaction['subTracking'])){
                                 $transactionArray['custom_id'] = $transaction['subTracking'];
-                                $transactionArray['click_date'] = ($transaction['clickDate']);
+                                //FlexOffers -- Our servers are in EST, this is the time zone used in our reporting
+                                $transactionArray['click_date'] = new \DateTime($transaction['clickDate'], new \DateTimeZone('EST'));
                             }
                             $transactionArray['merchantId'] = $transaction['programId'];
                             $transactionArray['merchantName'] = $transaction['programName'];
-                            $transactionArray['date'] = $transaction['eventDate'];
+                            $transactionArray['date'] = new \DateTime($transaction['eventDate'], new \DateTimeZone('EST'));
                             if (isset($transaction['modifiedDate'])){
-                                $transactionArray['update_date'] = $transaction['modifiedDate'];
+                                $transactionArray['update_date'] = new \DateTime($transaction['modifiedDate'], new \DateTimeZone('EST'));
                             }
-                            if ($transaction['orderStatus'] == 'Pending') {
+                            if (strtolower($transaction['orderStatus']) == 'pending') {
                                 $transactionArray['status'] = \Oara\Utilities::STATUS_PENDING;
-                            } elseif ($transaction['orderStatus'] == 'Approved') {
+                            } elseif (strtolower($transaction['orderStatus']) == 'approved') {
                                 $transactionArray['status'] = \Oara\Utilities::STATUS_CONFIRMED;
-                            } elseif ($transaction['orderStatus'] == 'Canceled') {
+                            } elseif (strtolower($transaction['orderStatus']) == 'cancelled' || strtolower($transaction['orderStatus']) == 'canceled') {
                                 $transactionArray['status'] = \Oara\Utilities::STATUS_DECLINED;
                             } else {
-                                throw new \Exception("Unexpected transaction status {$transaction['orderStatus']}");
+                                throw new \Exception("[FlexOffers][getTransactionList] - unexpected transaction status {$transaction['orderStatus']}");
                             }
                             $transactionArray['currency'] = $transaction['currency'];
                             $transactionArray['amount'] = \Oara\Utilities::parseDouble($transaction['merchantValue']);
@@ -145,14 +162,26 @@ class FlexOffers extends \Oara\Network
                     }
                 }
                 if ($transactionList['totalCount'] < $transactionList['pageSize']){
-                    $loop = false;
+                    if ($status == 'pending'){
+                        $status = 'approved';
+                        $page = 1;
+                        continue;
+                    }
+                    elseif ($status == 'approved'){
+                        $status = 'cancelled';
+                        $page = 1;
+                        continue;
+                    }
+                    elseif ($status == 'cancelled'){
+                        $loop = false;
+                    }
                 }
                 elseif ($transactionList['totalCount'] > count($totalTransactions)){
                     $loop = true;
                     $page++;
                 }
                 else {
-                    //empty respons - status code 204
+                    //empty response - status code 204
                     $loop = false;
                 }
             }
