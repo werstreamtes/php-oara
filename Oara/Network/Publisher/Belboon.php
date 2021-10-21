@@ -91,8 +91,7 @@ class Belboon extends \Oara\Network
         $params = [
             'filter[date_from]' => $dStartDate->format('d.m.Y'),
             'filter[date_to]' => $dEndDate->format('d.m.Y'),
-            'filter[timerange_type]' => 'absolute',
-            'filter[currencycode]' => 'EUR'
+            'filter[timerange_type]' => 'absolute'
         ];
 
         $rawTransactions = $this->callApi($TRANSACTIONS_LIST_PATH, $params);
@@ -116,7 +115,8 @@ class Belboon extends \Oara\Network
             // $transaction['lastchangedate'] = $rawTransaction["lastchangedate"];
 
             $transaction['custom_id'] = $this->getTrackingCode($rawTransaction["click_subid"]);
-
+            //currency example: EUR -- The ISO 4217 currency code of the currency you selected in your partner UI or the currency you selected in the parameter of your export link.
+            $transaction['currency'] = $rawTransaction['conversion_currency_code'];
             switch ($rawTransaction["conversion_status"]) {
             case '0':
             case '1':
@@ -159,7 +159,9 @@ class Belboon extends \Oara\Network
 
         curl_setopt($client, CURLOPT_URL, $url);
         curl_setopt($client, CURLOPT_RETURNTRANSFER, true);
-
+        curl_setopt($client, CURLOPT_SSL_VERIFYPEER, FALSE);
+        $error = curl_errno($client);
+        $http_code = curl_getinfo($client, CURLINFO_HTTP_CODE);
         $response = curl_exec($client);
         curl_close($client);
 
