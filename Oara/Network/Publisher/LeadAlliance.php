@@ -91,10 +91,10 @@ class LeadAlliance extends \Oara\Network
             $hash = hash_hmac('sha256', '', $private);
         }
 
-        $url = $url_endpoint . "/api/v1/index.php/partner/transactions?date=" . $dStartDate->format("Y-m-d") . "&dateend=" . $dEndDate->format("Y-m-d");
+        $url = $url_endpoint . "/api/v2/partner/transactions?date=" . $dStartDate->format("Y-m-d") . "&date_end=" . $dEndDate->format("Y-m-d");
         if (!empty($id_site)) {
             // id_site is a specific partner id
-            $url .= "&prid=" . $id_site;
+            $url .= "&program_id=" . $id_site;
         }
         // initialize curl resource
         $ch = curl_init();
@@ -119,15 +119,13 @@ class LeadAlliance extends \Oara\Network
             if (is_array($transactionList) && count($transactionList) > 0) {
                 foreach ($transactionList as $transaction) {
                     $transactionArray = Array();
-                    $transactionArray['unique_id'] = $transaction['transactionid'];
-                    $transactionArray['merchantId'] = $transaction['programid'];
+                    $transactionArray['unique_id'] = $transaction['transaction_id'];
+                    $transactionArray['merchantId'] = $transaction['program_id'];
                     $transactionArray['merchantName'] = $transaction['program'];
-                    $date_origin = $transaction['dateorigin'];
-                    $time_origin = $transaction['timeorigin'];
-                    $transactionArray['date'] = $date_origin . ' ' . $time_origin;
-                    $transactionArray['click_date'] = $transaction['timeclick'];
-                    $transactionArray['update_date'] = $transaction['dateedit'];
-                    $transactionArray['custom_id'] = $transaction['subid'];
+                    $transactionArray['date'] = $transaction['date_of_origin'];
+                    $transactionArray['click_date'] = $transaction['time_click'] ?? '';
+                    $transactionArray['update_date'] = $transaction['date_edit'] ?? '';
+                    $transactionArray['custom_id'] = $transaction['adspace_sub_id'];
                     if ($transaction['status'] == '2') {
                         $transactionArray['status'] = \Oara\Utilities::STATUS_CONFIRMED;
                     } elseif ($transaction['status'] == '1') {
@@ -137,16 +135,16 @@ class LeadAlliance extends \Oara\Network
                     } else {
                         throw new \Exception("Unexpected transaction status {$transaction['status']}");
                     }
-                    $transactionArray['currency'] = 'EUR';  // Default value
+                    $transactionArray['currency'] = $transaction['currency'];
                     $transactionArray['amount'] = \Oara\Utilities::parseDouble($transaction['value']);
                     $transactionArray['commission'] = \Oara\Utilities::parseDouble($transaction['commission']);
-                    $transactionArray['info'] = $transaction['info'];
-                    $transactionArray['statuscomment'] = $transaction['statuscomment'];
-                    $transactionArray['datepayment'] = $transaction['datepayment'];
-                    $transactionArray['category'] = $transaction['category'];
-                    $transactionArray['leadtype'] = $transaction['leadtype'];
-                    $transactionArray['adspaceid'] = $transaction['adspaceid'];
-                    $transactionArray['autookdate'] = $transaction['autookdate'];
+                    $transactionArray['info'] = $transaction['info'] ?? '';
+                    $transactionArray['statuscomment'] = $transaction['status_comment'];
+                    $transactionArray['datepayment'] = $transaction['datepayment'] ?? '';
+                    $transactionArray['category'] = $transaction['category_identifier'];
+                    $transactionArray['leadtype'] = $transaction['leadtype'] ?? '';
+                    $transactionArray['adspaceid'] = $transaction['adspace_id'];
+                    $transactionArray['autookdate'] = $transaction['autookdate'] ?? '';
                     $totalTransactions[] = $transactionArray;
                 }
             }
