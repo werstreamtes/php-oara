@@ -136,6 +136,8 @@ class FlexOffers extends \Oara\Network
                             $transactionArray['unique_id'] = $transaction['legacyId'];
                             if (isset($transaction['subTracking'])){
                                 $transactionArray['custom_id'] = $transaction['subTracking'];
+                            }
+                            if (isset($transaction['clickDate'])){
                                 //FlexOffers -- Our servers are in EST, this is the time zone used in our reporting
                                 $transactionArray['click_date'] = new \DateTime($transaction['clickDate'], new \DateTimeZone('EST'));
                             }
