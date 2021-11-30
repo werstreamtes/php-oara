@@ -134,8 +134,26 @@ class FlexOffers extends \Oara\Network
                         foreach ($transactionList['results'] as $transaction) {
                             $transactionArray = Array();
                             $transactionArray['unique_id'] = $transaction['legacyId'];
-                            if (isset($transaction['subTracking'])){
+                            if (isset($transaction['subTracking']) && !empty($transaction['subTracking'])){
                                 $transactionArray['custom_id'] = $transaction['subTracking'];
+                            }
+                            elseif (isset($transaction['subId1']) && !empty($transaction['subId1'])){
+                                $transactionArray['custom_id'] = $transaction['subId1'];
+                            }
+                            elseif (isset($transaction['subId2']) && !empty($transaction['subId2'])){
+                                $transactionArray['custom_id'] = $transaction['subId2'];
+                            }
+                            elseif (isset($transaction['subId3']) && !empty($transaction['subId3'])){
+                                $transactionArray['custom_id'] = $transaction['subId3'];
+                            }
+                            elseif (isset($transaction['subId4']) && !empty($transaction['subId4'])){
+                                $transactionArray['custom_id'] = $transaction['subId4'];
+                            }
+                            elseif (isset($transaction['subId5']) && !empty($transaction['subId5'])){
+                                $transactionArray['custom_id'] = $transaction['subId5'];
+                            }
+                            else{
+                                $transactionArray['custom_id'] = '';
                             }
                             if (isset($transaction['clickDate'])){
                                 //FlexOffers -- Our servers are in EST, this is the time zone used in our reporting
