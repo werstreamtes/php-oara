@@ -64,7 +64,7 @@ class Booking extends \Oara\Network
             $url_endpoint = 'https://secure-distribution-xml.booking.com/';
             $version = '2.8/';
             $offset = 0;
-            $limit = 10000;
+            $limit = 1000; //max value: 1000
             $currency = 'EUR';
             $loop = true;
             while ($loop){
