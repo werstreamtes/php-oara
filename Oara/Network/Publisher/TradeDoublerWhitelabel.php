@@ -43,7 +43,7 @@ class TradeDoublerWhitelabel extends \Oara\Network
 
 		$user = $this->_credentials['user'];
 		$password = $this->_credentials['password'];
-		$loginUrl = 'http://publisher.tradedoubler.com/pan/login';
+		$loginUrl = 'https://publisher.tradedoubler.com/pan/login';
 
 		$valuesLogin = array(new \Oara\Curl\Parameter('j_username', $user),
 			new \Oara\Curl\Parameter('j_password', $password)
@@ -84,7 +84,7 @@ class TradeDoublerWhitelabel extends \Oara\Network
 		$connection = false;
 
 		$urls = array();
-		$urls[] = new \Oara\Curl\Request('http://publisher.tradedoubler.com/pan/aReport3Selection.action?reportName=aAffiliateProgramOverviewReport', array());
+		$urls[] = new \Oara\Curl\Request('https://publisher.tradedoubler.com/pan/aReport3Selection.action?reportName=aAffiliateProgramOverviewReport', array());
 		$exportReport = $this->_client->get($urls);
 
 		if (\preg_match('/\(([a-zA-Z]{0,4}[\/\.-][a-zA-Z]{0,4}[\/\.-][a-zA-Z]{0,4})\)/', $exportReport[0], $match)) {
@@ -176,7 +176,7 @@ class TradeDoublerWhitelabel extends \Oara\Network
 			new \Oara\Curl\Parameter('programAffiliateStatusId', '3')
 		);
 		$urls = array();
-		$urls[] = new \Oara\Curl\Request('http://publisher.tradedoubler.com/pan/aReport3Internal.action?', $valuesFormExport);
+		$urls[] = new \Oara\Curl\Request('https://publisher.tradedoubler.com/pan/aReport3Internal.action?', $valuesFormExport);
 		$exportReport = $this->_client->post($urls);
 		$exportReport[0] = self::checkReportError($exportReport[0], $urls[0]);
 		$merchantReportList = self::getExportMerchantReport($exportReport[0]);
@@ -235,7 +235,7 @@ class TradeDoublerWhitelabel extends \Oara\Network
 			new \Oara\Curl\Parameter('programAffiliateStatusId', '4')
 		);
 		$urls = array();
-		$urls[] = new \Oara\Curl\Request('http://publisher.tradedoubler.com/pan/aReport3Internal.action?', $valuesFormExport);
+		$urls[] = new \Oara\Curl\Request('https://publisher.tradedoubler.com/pan/aReport3Internal.action?', $valuesFormExport);
 		$exportReport = $this->_client->post($urls);
 		$exportReport[0] = self::checkReportError($exportReport[0], $urls[0]);
 		$merchantReportListAux = self::getExportMerchantReport($exportReport[0]);
@@ -252,7 +252,7 @@ class TradeDoublerWhitelabel extends \Oara\Network
 			//report too big, we have to download it and read it
 			if (\preg_match('/(\/report\/published\/(aAffiliateEventBreakdownReport(.*))\.zip)/', $content, $matches)) {
 
-				$file = "http://publisher.tradedoubler.com" . $matches[0];
+				$file = "https://publisher.tradedoubler.com" . $matches[0];
 				$newfile = \realpath(\dirname(COOKIES_BASE_DIR)) . '/pdf/' . $matches[2] . '.zip';
 
 				if (!\copy($file, $newfile)) {
@@ -411,7 +411,7 @@ class TradeDoublerWhitelabel extends \Oara\Network
 		$valuesFormExport[] = new \Oara\Curl\Parameter('startDate', self::formatDate($dStartDate));
 		$valuesFormExport[] = new \Oara\Curl\Parameter('endDate', self::formatDate($dEndDate));
 		$urls = array();
-		$urls[] = new \Oara\Curl\Request('http://publisher.tradedoubler.com/pan/aReport3Internal.action?', $valuesFormExport);
+		$urls[] = new \Oara\Curl\Request('https://publisher.tradedoubler.com/pan/aReport3Internal.action?', $valuesFormExport);
 		$exportReport = $this->_client->get($urls);
 
 		$exportReport[0] = self::checkReportError($exportReport[0], $urls[0]);
@@ -594,7 +594,7 @@ class TradeDoublerWhitelabel extends \Oara\Network
 		$paymentHistory = array();
 
 		$urls = array();
-		$urls[] = new \Oara\Curl\Request('http://publisher.tradedoubler.com/pan/reportSelection/Payment?', array());
+		$urls[] = new \Oara\Curl\Request('https://publisher.tradedoubler.com/pan/reportSelection/Payment?', array());
 		$exportReport = $this->_client->get($urls);
 		/*** load the html into the object ***/
 		$doc = new \DOMDocument();
@@ -653,7 +653,7 @@ class TradeDoublerWhitelabel extends \Oara\Network
 		$valuesFormExport = array();
 		$valuesFormExport[] = new \Oara\Curl\Parameter('popup', 'true');
 		$valuesFormExport[] = new \Oara\Curl\Parameter('payment_id', $paymentId);
-		$urls[] = new \Oara\Curl\Request('http://publisher.tradedoubler.com/pan/reports/Payment.html?', $valuesFormExport);
+		$urls[] = new \Oara\Curl\Request('https://publisher.tradedoubler.com/pan/reports/Payment.html?', $valuesFormExport);
 		$exportReport = $this->_client->get($urls);
 
 
@@ -663,7 +663,7 @@ class TradeDoublerWhitelabel extends \Oara\Network
 		$urls = array();
 		foreach ($results as $result) {
 			$url = $result->getAttribute('href');
-			$urls[] = new \Oara\Curl\Request("http://publisher.tradedoubler.com" . $url . "&format=CSV", array());
+			$urls[] = new \Oara\Curl\Request("https://publisher.tradedoubler.com" . $url . "&format=CSV", array());
 		}
 		$exportReportList = $this->_client->get($urls);
 		foreach ($exportReportList as $exportReport) {

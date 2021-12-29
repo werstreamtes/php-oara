@@ -31,7 +31,7 @@ class Brandreward extends \Oara\Network
 	 * API URL
 	 * @var string
 	 */
-	protected $_apiUrl = 'http://api.brandreward.com';
+	protected $_apiUrl = 'https://api.brandreward.com';
 
 
 	/**
