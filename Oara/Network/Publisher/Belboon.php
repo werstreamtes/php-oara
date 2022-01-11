@@ -95,7 +95,9 @@ class Belboon extends \Oara\Network
         ];
 
         $rawTransactions = $this->callApi($TRANSACTIONS_LIST_PATH, $params);
-
+        if (count($rawTransactions) == 0){
+            return [];
+        }
         if ($merchantList) {
             $rawTransactions = array_filter(
                 $rawTransactions,

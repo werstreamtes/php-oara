@@ -93,7 +93,9 @@ class BelboonWhitelabel extends \Oara\Network
         $params = ['filter[date_from]' => $dStartDate->format('d.m.Y') , 'filter[date_to]' => $dEndDate->format('d.m.Y') , 'filter[timerange_type]' => 'absolute'];
 
         $rawTransactions = $this->callApi($TRANSACTIONS_LIST_PATH, $params);
-
+        if (count($rawTransactions) == 0){
+            return [];
+        }
         if ($merchantList)
         {
             $rawTransactions = array_filter($rawTransactions, function ($rawTransaction) use ($merchantList)
