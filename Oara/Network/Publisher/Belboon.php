@@ -140,9 +140,7 @@ class Belboon extends \Oara\Network
     {
         $VOUCHERS_LIST_PATH = "{$this->BASE_PATH}/{$this->_api_key}/vouchers.csv";
 
-        $params = [
-            'filter[uid]' => $this->_user_id
-        ];
+        $params = ['filter[program_adspace]' => $this->_user_id];
 
         $rawVouchers = $this->callApi($VOUCHERS_LIST_PATH, $params);
 
