@@ -169,7 +169,7 @@ class FlexOffers extends \Oara\Network
                                 $transactionArray['status'] = \Oara\Utilities::STATUS_PENDING;
                             } elseif (strtolower($transaction['orderStatus']) == 'approved') {
                                 $transactionArray['status'] = \Oara\Utilities::STATUS_CONFIRMED;
-                            } elseif (strtolower($transaction['orderStatus']) == 'cancelled' || strtolower($transaction['orderStatus']) == 'canceled') {
+                            } elseif (strtolower($transaction['orderStatus']) == 'cancelled' || strtolower($transaction['orderStatus']) == 'canceled' || strtolower($transaction['orderStatus']) == 'non-commissionable') {
                                 $transactionArray['status'] = \Oara\Utilities::STATUS_DECLINED;
                             } else {
                                 throw new \Exception("[FlexOffers][getTransactionList] - unexpected transaction status {$transaction['orderStatus']}");
