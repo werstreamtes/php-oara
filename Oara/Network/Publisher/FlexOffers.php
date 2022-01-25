@@ -175,7 +175,15 @@ class FlexOffers extends \Oara\Network
                                 throw new \Exception("[FlexOffers][getTransactionList] - unexpected transaction status {$transaction['orderStatus']}");
                             }
                             $transactionArray['currency'] = $transaction['currency'];
-                            $transactionArray['amount'] = \Oara\Utilities::parseDouble($transaction['merchantValue']);
+                            if (isset($transaction['merchantValue'])){
+                                $transactionArray['amount'] = \Oara\Utilities::parseDouble($transaction['merchantValue']);
+                            }
+                            elseif (isset($transaction['saleAmount'])){
+                                $transactionArray['amount'] = \Oara\Utilities::parseDouble($transaction['saleAmount']);
+                            }
+                            else{
+                                echo '[php-oara][Oara][Network][Publisher][FlexOffers][getTransactionList] amount attribute not found ' . PHP_EOL;
+                            }
                             $transactionArray['commission'] = \Oara\Utilities::parseDouble($transaction['commission']);
                             $totalTransactions[] = $transactionArray;
                         }
