@@ -253,7 +253,7 @@ class Skimlinks extends \Oara\Network
                     break;
                 }
                 $offset += $limit;
-                $limit = 100;
+                $limit = 600;
             }
             catch(\Exception $e){
                 if ($limit == 1){
