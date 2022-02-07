@@ -187,7 +187,7 @@ class Skimlinks extends \Oara\Network
     private function processTransactions($valuesFromExport)
     {
         $totalTransactions = array();
-        $limit = 100; //default 30
+        $limit = 600; //default 30 max. 600
         $offset = 0;
 
         while (true) {
