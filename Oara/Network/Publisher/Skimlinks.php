@@ -282,7 +282,7 @@ class Skimlinks extends \Oara\Network
     public function getMerchantsSkimlinks($a_params):array {
 
         $a_merchants = Array();
-        $limit = 100; //default 25
+        $limit = 200; //default 25
         $offset = 0;
 
         array_push($a_params,
@@ -317,7 +317,7 @@ class Skimlinks extends \Oara\Network
                     break;
                 }
                 $offset += $limit;
-                $limit = 100;
+                $limit = 200;
             }
             catch(\Exception $e){
                 if ($limit == 1){
