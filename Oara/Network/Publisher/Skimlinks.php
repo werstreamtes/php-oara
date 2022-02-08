@@ -225,12 +225,17 @@ class Skimlinks extends \Oara\Network
                             $transaction['currency'] = $i["transaction_details"]["basket"]["currency"];
                         }
                         $transactionStatus = $i["transaction_details"]["status"];
-                        if ($transactionStatus == "active") {
+                        $payment_status = $i["transaction_details"]["payment_status"];
+                        if ($transactionStatus == "active" && $payment_status == 'paid') {
                             $transaction ['status'] = \Oara\Utilities::STATUS_CONFIRMED;
-                        } else if ($transactionStatus == "cancelled") {
+                        }
+                        else if ($transactionStatus == "active" && $payment_status == 'unpaid') {
+                            $transaction ['status'] = \Oara\Utilities::STATUS_PENDING;
+                        }
+                        else if ($transactionStatus == "cancelled") {
                             $transaction ['status'] = \Oara\Utilities::STATUS_DECLINED;
                         } else {
-                            throw new \Exception ("New status found {$transactionStatus}");
+                            throw new \Exception ("[Skimlinks][processTransactions] transaction status -- new status found {$transactionStatus}");
                         }
                     }
                     if (isset($i["click_details"])) {
