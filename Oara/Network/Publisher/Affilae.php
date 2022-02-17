@@ -117,7 +117,7 @@ class Affilae extends \Oara\Network
                         foreach ($transactionList['conversions']['data'] as $transaction) {
                             $transactionArray = Array();
                             $sub_id = '';
-                            $transactionArray['unique_id'] = $transaction['externalId'];
+                            $transactionArray['unique_id'] = $transaction['id'] .'|'.$transaction['externalId'];
                             if (isset($transaction['subId']) && !empty($transaction['subId']) && ($transaction['subId'] != 'yes') && ($transaction['subId'] != 'no') && ($transaction['subId'] != 'N/A')){
                                 $transactionArray['custom_id'] = $transaction['subId'];
                             }
