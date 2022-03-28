@@ -115,12 +115,11 @@ class Brandreward extends \Oara\Network
                         'outformat' => 'json', //Output content format (default:txt , option:'txt','json','xml','csv')
                     )
 				);
-
+                if (isset($transactionsList['response']) && $transactionsList['response']['Num'] == 0) {
+                    $loop = false;
+                    break;
+                }
 				if (isset($transactionsList['data'])){
-					if ($transactionsList['response']['Num'] == 0) {
-						$loop = false;
-						break;
-					}
 					foreach ($transactionsList['data'] as $transaction) {
 						$a_transaction['unique_id'] = $transaction['TransactionID'];
 						$a_transaction['date'] = new \DateTime($transaction['CreateTime']);
