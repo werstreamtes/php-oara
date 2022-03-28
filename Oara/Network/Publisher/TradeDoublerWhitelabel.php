@@ -276,6 +276,10 @@ class TradeDoublerWhitelabel extends \Oara\Network
 
 		} else
 			if (\preg_match("/ error/", $content, $matches)) {
+                if (str_contains($content, 'No read access to resource REPORT3_SERVICE_REPORTS_AFFILIATE_MY_PROGRAMS_REPORT')){
+                    echo '[php-oara][Oara][Network][Publisher][TradeDoublerWhitelabel][checkReportError] 500 -- No read access to resource REPORT3_SERVICE_REPORTS_AFFILIATE_MY_PROGRAMS_REPORT';
+                    return '';
+                }
 				$urls = array();
 				$urls[] = $request;
 				$exportReport = $this->_client->get($urls);
