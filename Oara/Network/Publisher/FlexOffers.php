@@ -200,7 +200,7 @@ class FlexOffers extends \Oara\Network
                         $page = 1;
                         continue;
                     }
-                    elseif ($status == 'cancelled'){
+                    elseif ($status == 'cancelled' || $status == 'all'){
                         $loop = false;
                     }
                 }
