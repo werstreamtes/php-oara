@@ -122,7 +122,7 @@ class Daisycon extends \Oara\Network
 				continue;
 			}
 			$page = 1;
-			$pageSize = 100;
+			$pageSize = 1000;
 			$finish = false;
 
 			while (!$finish) {
@@ -185,7 +185,7 @@ class Daisycon extends \Oara\Network
 			}
 
 			$page = 1;
-			$pageSize = 100;
+			$pageSize = 1000;
 			$finish = false;
 
 			while (!$finish) {
@@ -277,7 +277,7 @@ class Daisycon extends \Oara\Network
 			}
 
 			$page = 1;
-			$pageSize = 100;
+			$pageSize = 1000;
 			$finish = false;
 
 			while (!$finish) {
@@ -290,16 +290,25 @@ class Daisycon extends \Oara\Network
 				curl_setopt($ch, CURLOPT_URL, $url);
 				curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 				curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-				// execute curl
-				$response = curl_exec($ch);
-				$vouchers_list = json_decode($response, true);
-				foreach ($vouchers_list as $voucher) {
-					$a_vouchers[] = $voucher;
-				}
-				if (count($vouchers_list) != $pageSize) {
-					$finish = true;
-				}
-				$page++;
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+                // execute curl
+                $response = curl_exec($ch);
+                $error = curl_errno($ch);
+                $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                if (204 == $http_code){
+                    //no content
+                    return $a_vouchers;
+                }
+                else{
+                    $vouchers_list = json_decode($response, true);
+                    foreach ($vouchers_list as $voucher) {
+                        $a_vouchers[] = $voucher;
+                    }
+                    if (count($vouchers_list) != $pageSize) {
+                        $finish = true;
+                    }
+                    $page++;
+                }
 			}
 			return $a_vouchers;
 		}
