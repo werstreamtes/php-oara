@@ -1,24 +1,24 @@
 <?php
 namespace Oara\Network\Publisher;
-    /**
-     * The goal of the Open Affiliate Report Aggregator (OARA) is to develop a set
-     * of PHP classes that can download affiliate reports from a number of affiliate networks, and store the data in a common format.
-     *
-     * Copyright (C) 2016  Fubra Limited
-     * This program is free software: you can redistribute it and/or modify
-     * it under the terms of the GNU Affero General Public License as published by
-     * the Free Software Foundation, either version 3 of the License, or any later version.
-     * This program is distributed in the hope that it will be useful,
-     * but WITHOUT ANY WARRANTY; without even the implied warranty of
-     * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-     * GNU Affero General Public License for more details.
-     * You should have received a copy of the GNU Affero General Public License
-     * along with this program.  If not, see <http://www.gnu.org/licenses/>.
-     *
-     * Contact
-     * ------------
-     * Fubra Limited <support@fubra.com> , +44 (0)1252 367 200
-     **/
+/**
+ * The goal of the Open Affiliate Report Aggregator (OARA) is to develop a set
+ * of PHP classes that can download affiliate reports from a number of affiliate networks, and store the data in a common format.
+ *
+ * Copyright (C) 2016  Fubra Limited
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Contact
+ * ------------
+ * Fubra Limited <support@fubra.com> , +44 (0)1252 367 200
+ **/
 /**
  * Api Class
  *
@@ -50,6 +50,8 @@ class WebGains extends \Oara\Network
         $this->_credentials = $credentials;
         $this->_user = $credentials['user'];
         $this->_password = $credentials['password'];
+        $this->_sitesAllowed = $credentials['sitesAllowed'];
+
         $this->_client = new \Oara\Curl\Access($credentials);
 
         $wsdlUrl = 'http://ws.webgains.com/aws.php';
@@ -71,50 +73,77 @@ class WebGains extends \Oara\Network
         $serverArray["es"] = 'www.webgains.es';
         $serverArray["ie"] = 'www.webgains.ie';
         $serverArray["it"] = 'www.webgains.it';
+        $serverArray["au"] = 'www.webgains.com.au';
+        $serverArray["pt"] = 'www.webgains.pt';
 
-        $loginUrlArray = array();
-        $loginUrlArray["uk"] = 'https://www.webgains.com/loginform.html?action=login';
-        $loginUrlArray["fr"] = 'https://www.webgains.fr/loginform.html?action=login';
-        $loginUrlArray["us"] = 'https://us.webgains.com/loginform.html?action=login';
-        $loginUrlArray["de"] = 'https://www.webgains.de/loginform.html?action=login';
-        $loginUrlArray["nl"] = 'https://www.webgains.nl/loginform.html?action=login';
-        $loginUrlArray["dk"] = 'https://www.webgains.dk/loginform.html?action=login';
-        $loginUrlArray["se"] = 'https://www.webgains.se/loginform.html?action=login';
-        $loginUrlArray["es"] = 'https://www.webgains.es/loginform.html?action=login';
-        $loginUrlArray["ie"] = 'https://www.webgains.ie/loginform.html?action=login';
-        $loginUrlArray["it"] = 'https://www.webgains.it/loginform.html?action=login';
-
-
-        foreach ($loginUrlArray as $country => $url) {
-
-            $postValues = array(
-                // Get user/password from credentials
-                'username' => $this->_user,
-                'password' => $this->_password,
-                'user_type' => 'affiliateuser'
-            );
-
-            $curl = curl_init();
-            curl_setopt($curl, CURLOPT_URL, $url);
-            curl_setopt($curl, CURLOPT_POST, true);
-            curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query($postValues));
-            curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
-            curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($curl, CURLOPT_COOKIEJAR, 'webgains_cookie.txt');
-            curl_setopt($curl, CURLOPT_COOKIEFILE, 'webgains_cookie.txt');
-            curl_setopt($curl, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.2309.372 Safari/537.36');
-            curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($curl, CURLOPT_REFERER, $url);
-            curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
-            $result = curl_exec($curl);
-
-            if (\preg_match("/logout.html/", $result)) {
-                //echo "login succesfull";
+        if (isset($_ENV['SYSTEM'])) {
+            $country = $_ENV['SYSTEM'];
+            if ('at' == $country){
+                $country = 'de';
+            }
+            if (!empty($serverArray[$country])){
                 $this->_server = $serverArray[$country];
-                $this->_campaignMap = self::getCampaignMap($result);
-                break;
             }
         }
+        if (is_array($this->_sitesAllowed) && count($this->_sitesAllowed) > 0){
+            foreach ($this->_sitesAllowed as $site){
+                $this->_campaignMap[(int) $site] = $site;
+            }
+        }
+        else{
+
+            $loginUrlArray = array();
+            $loginUrlArray["uk"] = 'https://www.webgains.com/loginform.html?action=login';
+            $loginUrlArray["fr"] = 'https://www.webgains.fr/loginform.html?action=login';
+            $loginUrlArray["us"] = 'https://us.webgains.com/loginform.html?action=login';
+            $loginUrlArray["de"] = 'https://www.webgains.de/loginform.html?action=login';
+            $loginUrlArray["nl"] = 'https://www.webgains.nl/loginform.html?action=login';
+            $loginUrlArray["dk"] = 'https://www.webgains.dk/loginform.html?action=login';
+            $loginUrlArray["se"] = 'https://www.webgains.se/loginform.html?action=login';
+            $loginUrlArray["es"] = 'https://www.webgains.es/loginform.html?action=login';
+            $loginUrlArray["ie"] = 'https://www.webgains.ie/loginform.html?action=login';
+            $loginUrlArray["it"] = 'https://www.webgains.it/loginform.html?action=login';
+            $loginUrlArray["au"] = 'https://www.webgains.com.au/loginform.html?action=login';
+            $loginUrlArray["pt"] = 'https://www.webgains.pt/loginform.html?action=login';
+
+
+            foreach ($loginUrlArray as $country => $url) {
+
+                $postValues = array(
+                    // Get user/password from credentials
+                    'username' => $this->_user,
+                    'password' => $this->_password,
+                    'user_type' => 'affiliateuser'
+                );
+
+                $curl = curl_init();
+                curl_setopt($curl, CURLOPT_URL, $url);
+                curl_setopt($curl, CURLOPT_POST, true);
+                curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query($postValues));
+                curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
+                curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($curl, CURLOPT_COOKIEJAR, 'webgains_cookie.txt');
+                curl_setopt($curl, CURLOPT_COOKIEFILE, 'webgains_cookie.txt');
+                curl_setopt($curl, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36');
+                curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($curl, CURLOPT_REFERER, $url);
+                curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
+                // execute curl
+                $result = curl_exec($curl);
+                $error = curl_errno($curl);
+                $http_code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+
+                if (\preg_match("/logout.html/", $result)) {
+                    //echo "login succesfull";
+                    $this->_server = $serverArray[$country];
+                    $this->_campaignMap = self::getCampaignMap($result);
+                    if (count($this->_campaignMap) > 0){
+                        break;
+                    }
+                }
+            }
+        }
+
 
     }
 
@@ -173,7 +202,7 @@ class WebGains extends \Oara\Network
     public function checkConnection()
     {
         $connection = false;
-        if ($this->_server != null) {
+        if ($this->_server != null || count($this->_campaignMap) > 0) {
             $connection = true;
         }
         return $connection;
@@ -184,34 +213,34 @@ class WebGains extends \Oara\Network
      */
     public function getMerchantList()
     {
-	    /**
-	     * Webgains Programs API
-	     * https://api.webgains.com/2.0/programs
-	     */
-	    $statisticsActions = "https://api.webgains.com/2.0/programs";
+        /**
+         * Webgains Programs API
+         * https://api.webgains.com/2.0/programs
+         */
+        $statisticsActions = "https://api.webgains.com/2.0/programs";
         $merchants = Array();
-	    $key = '';
+        $key = '';
         if (isset($this->_credentials['api-key'])) {
             // Could pass api-key with credentials - <slawn>
             $key = $this->_credentials['api-key'];
         }
-	    elseif (isset($_ENV['WEBGAINS_API_KEY'])) {
+        elseif (isset($_ENV['WEBGAINS_API_KEY'])) {
             // Fallback to environment variable
-	    	$key = $_ENV['WEBGAINS_API_KEY'];
-	    }
+            $key = $_ENV['WEBGAINS_API_KEY'];
+        }
         else {
             // No valid key ... return empty array
             return $merchants;
         }
-	    foreach ($this->_campaignMap as $campaignID => $campaignValue) {
-	        $ch = curl_init();
-	        curl_setopt($ch, CURLOPT_URL, $statisticsActions . '?key=' . $key .'&campaignid='. $campaignID);
-	        curl_setopt($ch, CURLOPT_POST, false);
-	        curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+        foreach ($this->_campaignMap as $campaignID => $campaignValue) {
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $statisticsActions . '?key=' . $key .'&campaignid='. $campaignID);
+            curl_setopt($ch, CURLOPT_POST, false);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
 
-	        $curl_results = curl_exec($ch);
-	        curl_close($ch);
-	        $a_merchants = json_decode($curl_results, true);
+            $curl_results = curl_exec($ch);
+            curl_close($ch);
+            $a_merchants = json_decode($curl_results, true);
             if (isset($a_merchants['code']) && $a_merchants['code'] == 401) {
                 echo "[error] Webgains Authentication Failed in get merchants";
                 return $merchants;
@@ -257,35 +286,35 @@ class WebGains extends \Oara\Network
                 // Dont'check for a valid program - <PN> 2017-07-05
                 // if (isset($merchantListIdList[$transactionObject->programID])) {
 
-                    $transaction = array();
-                    $transaction['merchantId'] = $transactionObject->programID;
-                    $transactionDate = \DateTime::createFromFormat("Y-m-d\TH:i:s", $transactionObject->date);
-                    $transaction["date"] = $transactionDate->format("Y-m-d H:i:s");
-                    $transaction['unique_id'] = $transactionObject->transactionID;
-                    if ($transactionObject->clickRef != null) {
-                        $transaction['custom_id'] = $transactionObject->clickRef;
-                    }
-                    $transaction['status'] = null;
-                    $transaction['amount'] = $transactionObject->saleValue;
-                    $transaction['commission'] = $transactionObject->commission;
-                    // Check both for status + paymentStatus
-                    if ($transactionObject->status == 'confirmed') {
-                        $transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
-                    }
-                    elseif ($transactionObject->status == 'delayed') {
-                        $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
-                    }
-                    elseif ($transactionObject->status == 'cancelled') {
-                        $transaction['status'] = \Oara\Utilities::STATUS_DECLINED;
-                    }
-                    if ($transactionObject->paymentStatus == 'paid') {
-                        $transaction['paid'] = true;
-                    }
-                    else {
-                        $transaction['paid'] = false;
-                    }
-                    $transaction['currency'] = $transactionObject->currency;
-                    $totalTransactions[] = $transaction;
+                $transaction = array();
+                $transaction['merchantId'] = $transactionObject->programID;
+                $transactionDate = \DateTime::createFromFormat("Y-m-d\TH:i:s", $transactionObject->date);
+                $transaction["date"] = $transactionDate->format("Y-m-d H:i:s");
+                $transaction['unique_id'] = $transactionObject->transactionID;
+                if ($transactionObject->clickRef != null) {
+                    $transaction['custom_id'] = $transactionObject->clickRef;
+                }
+                $transaction['status'] = null;
+                $transaction['amount'] = $transactionObject->saleValue;
+                $transaction['commission'] = $transactionObject->commission;
+                // Check both for status + paymentStatus
+                if ($transactionObject->status == 'confirmed') {
+                    $transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
+                }
+                elseif ($transactionObject->status == 'delayed') {
+                    $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
+                }
+                elseif ($transactionObject->status == 'cancelled') {
+                    $transaction['status'] = \Oara\Utilities::STATUS_DECLINED;
+                }
+                if ($transactionObject->paymentStatus == 'paid') {
+                    $transaction['paid'] = true;
+                }
+                else {
+                    $transaction['paid'] = false;
+                }
+                $transaction['currency'] = $transactionObject->currency;
+                $totalTransactions[] = $transaction;
                 // }
             }
         }
@@ -303,26 +332,29 @@ class WebGains extends \Oara\Network
         $vouchers = array();
 
         try {
+            if (!empty($this->_server)){
 
-            $url = $this->_server . '/publisher/' . $id_site . '/ad/vouchercodes/downloadcsv?';
+                $url = $this->_server . '/publisher/' . $id_site . '/ad/vouchercodes/downloadcsv?';
 
-            $curl = curl_init();
-            curl_setopt($curl, CURLOPT_URL, $url);
-            curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
-            curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($curl, CURLOPT_COOKIEJAR, 'webgains_cookie.txt');
-            curl_setopt($curl, CURLOPT_COOKIEFILE, 'webgains_cookie.txt');
-            curl_setopt($curl, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 5.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.2309.372 Safari/537.36');
-            curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($curl, CURLOPT_REFERER, $url);
-            curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
-            $result = curl_exec($curl);
+                $curl = curl_init();
+                curl_setopt($curl, CURLOPT_URL, $url);
+                curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
+                curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($curl, CURLOPT_COOKIEJAR, 'webgains_cookie.txt');
+                curl_setopt($curl, CURLOPT_COOKIEFILE, 'webgains_cookie.txt');
+                curl_setopt($curl, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36');
+                curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($curl, CURLOPT_REFERER, $url);
+                curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
+                $result = curl_exec($curl);
 
-            if ($result === false)
-            {
-                throw new \Exception("php-oara WebGains getVouchers - http error");
-            } else {
-                $vouchers = \str_getcsv($result, "\n");
+                if ($result === false)
+                {
+                    throw new \Exception("php-oara WebGains getVouchers - http error");
+                } else {
+                    $vouchers = \str_getcsv($result, "\n");
+                }
+
             }
         } catch (\Exception $e) {
             echo "WebGains getVouchers error:".$e->getMessage()."\n ";
