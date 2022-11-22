@@ -226,8 +226,9 @@ class Rakuten extends \Oara\Network
                 $transactionData = \str_getcsv($exportData[$j], ',', "\"", '\\');   //BV-1141 added enclosure + escape
 
                 if (count($transactionData) > 10 && (count($merchantIdList)==0 || isset($merchantIdList[$transactionData[3]]))) {
-                    if ($transactionData[1] === '' && strpos($transactionData[2],'/') !== false) {
-                        // BV-886 - Special case ... empty field after transaction id ... remove from array
+                    if (strpos($transactionData[2],'/') !== false &&
+                        strpos($transactionData[3],':') !== false) {
+                        // BV-886 && HELP-965 - Special case ... empty field after transaction id ... remove from array
                         unset($transactionData[1]);
                         $transactionData = array_values($transactionData);
                     }
