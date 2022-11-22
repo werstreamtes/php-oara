@@ -139,7 +139,7 @@ class Admitad extends \Oara\Network
 		try {
 			//https://developers.admitad.com/en/doc/api_en/methods/advcampaigns/advcampaigns-list/
 			$statisticsActions = "https://api.admitad.com/advcampaigns/";
-			$limit = 100;
+			$limit = 500; //default 20 max. 500
 			$offset = 0;
 			$loop = true;
 
@@ -184,7 +184,7 @@ class Admitad extends \Oara\Network
 	{
 		$totalTransactions = array();
 		try {
-			$limit = 100;
+			$limit = 500; //default 20 max. 500
 			$offset = 0;
 			$loop = true;
 
@@ -267,7 +267,7 @@ class Admitad extends \Oara\Network
 			//https://developers.admitad.com/en/doc/api_en/methods/coupons/coupons-website/
 			$couponsWebsite = "https://api.admitad.com/coupons/website/" . $idSite . '/';
 
-			$limit = 100;
+			$limit = 500; //default 20 max. 500
 			$offset = 0;
 			$loop = true;
 
