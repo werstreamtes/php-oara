@@ -152,7 +152,7 @@ class AdCell extends \Oara\Network
 						$a_transaction['date'] = $transaction['createTime'];
 						$a_transaction['update_date'] = $transaction['changeTime'];
 						$a_transaction['change_note'] = $transaction['changeNote'];
-						$a_transaction['IP'] = $transaction['ip'];
+						//$a_transaction['IP'] = $transaction['ip'];
 						$a_transaction['merchantId'] = $transaction['programId'];
 						$a_transaction['merchantName'] = $transaction['programName'];
 						$a_transaction['campaign_name'] = $transaction['eventName'];
