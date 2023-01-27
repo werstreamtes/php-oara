@@ -104,7 +104,8 @@ class CommissionJunctionGraphQL extends \Oara\Network
         }
 
         // Get only commission counts to check for a valid connection
-        $query = '{ publisherCommissions(forPublishers: ["#cid#"]){count} }';
+        // PN - 2023-01-27 Added a time-frame to avoid infinite waiting!
+        $query = '{ publisherCommissions(forPublishers: ["#cid#"] sinceEventDate:"2021-01-01T00:00:00Z",beforeEventDate:"2021-01-02T00:00:00Z"){count} }';
 
         $result = self::grapQLApiCall($query);
         if (isset($result->errors) && count($result->errors) > 0) {
