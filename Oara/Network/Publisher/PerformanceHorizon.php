@@ -158,10 +158,10 @@ class PerformanceHorizon extends \Oara\Network
                         if ($conversion["publisher_reference"] != null) {
                             $transaction['custom_id'] = $conversion["publisher_reference"];
                         }
-                        if ($conversion["conversion_value"]["conversion_status"] == 'approved') {
+                        if ($conversion["conversion_value"]["conversion_status"] == 'approved' || $conversion["conversion_value"]["conversion_status"] == 'mixed') {
                             $transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
                         } else
-                            if ($conversion["conversion_value"]["conversion_status"] == 'pending' || $conversion["conversion_value"]["conversion_status"] == 'mixed') {
+                            if ($conversion["conversion_value"]["conversion_status"] == 'pending') {
                                 $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
                             } else
                                 if ($conversion["conversion_value"]["conversion_status"] == 'rejected') {
