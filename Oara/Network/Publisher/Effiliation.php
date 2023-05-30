@@ -1,5 +1,7 @@
 <?php
 namespace Oara\Network\Publisher;
+use Oara\Utilities;
+
 /**
  * The goal of the Open Affiliate Report Aggregator (OARA) is to develop a set
  * of PHP classes that can download affiliate reports from a number of affiliate networks, and store the data in a common format.
@@ -130,16 +132,36 @@ class Effiliation extends \Oara\Network
                 if ($transactionExportArray[15] != null) {
                     $transaction['custom_id'] = $transactionExportArray[15];
                 }
-
-                if ($transactionExportArray[9] == 'Valide') {
-                    $transaction['status'] = \Oara\Utilities::STATUS_CONFIRMED;
-                } else
-                    if ($transactionExportArray[9] == 'Attente') {
-                        $transaction['status'] = \Oara\Utilities::STATUS_PENDING;
-                    } else
-                        if ($transactionExportArray[9] == 'Refusé') {
-                            $transaction['status'] = \Oara\Utilities::STATUS_DECLINED;
-                        }
+                switch ($transactionExportArray[9]){
+                    case 'Attente':
+                    case 'Pending':
+                    case 'Wartezustand':
+                    case 'Espera':
+                    case 'Attesa':
+                    case 'Pendente':
+                        $transaction['status'] = Utilities::STATUS_PENDING;
+                        break;
+                    case 'Refus':
+                    case 'Refuse':
+                    case 'Refusé':
+                    case 'Refusal':
+                    case 'Refused':
+                    case 'Rechazado':
+                    case 'Ablehnung':
+                    case 'Rifiuto':
+                    case 'Rejeição':
+                        $transaction['status'] = Utilities::STATUS_DECLINED;
+                        break;
+                    case 'Valide':
+                    case 'Valid':
+                    case 'Validated':
+                    case 'Gültig':
+                    case 'Autorizado':
+                    case 'Valido':
+                    case 'Válido':
+                        $transaction['status'] = Utilities::STATUS_CONFIRMED;
+                        break;
+                }
                 $transaction['amount'] = \Oara\Utilities::parseDouble($transactionExportArray[7]);
                 $transaction['commission'] = \Oara\Utilities::parseDouble($transactionExportArray[8]);
                 $totalTransactions[] = $transaction;
