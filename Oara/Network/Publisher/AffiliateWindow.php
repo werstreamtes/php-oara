@@ -161,7 +161,7 @@ class AffiliateWindow extends \Oara\Network
                 new \Oara\Curl\Parameter('regionIds', ''),
                 new \Oara\Curl\Parameter('advertiserIds', ''),
                 new \Oara\Curl\Parameter('membershipStatus', ''),
-                new \Oara\Curl\Parameter('promotionStatus', 'active'),
+                new \Oara\Curl\Parameter('promotionStatus', ''),
             );
 
             $urls[] = new \Oara\Curl\Request('https://ui.awin.com/export-promotions/' . $id . '/' . $apiKey . '?', $params);
