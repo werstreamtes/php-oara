@@ -109,7 +109,7 @@ class ShareASale extends \Oara\Network
 	public function checkConnection()
 	{
 		$connection = true;
-
+        /*
 		$returnResult = self::makeCall("apitokencount");
 		if ($returnResult) {
 			//parse HTTP Body to determine result of request
@@ -124,6 +124,7 @@ class ShareASale extends \Oara\Network
             echo "[ShareASale][checkConnection][Error 2] " . $returnResult . PHP_EOL;
 			$connection = false;
 		}
+        */
 		return $connection;
 	}
 
