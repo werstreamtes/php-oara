@@ -247,6 +247,8 @@ class TradeDoubler extends \Oara\Network
 				 * The values for dates should be in format Ymd
 				 * Returns the result in the JSON format
 				 */
+				// wait 2 seconds to avoid rate limit
+                		sleep(2);
 				$url_transactions = $this->_apiUrl . '/publisher/report/transactions';
 				$params = array(
 					new \Oara\Curl\Parameter('reportCurrencyCode', $currency),
@@ -271,6 +273,14 @@ class TradeDoubler extends \Oara\Network
 				$curl_results = curl_exec($ch);
 				curl_close($ch);
 				$transactionsList = json_decode($curl_results, true);
+                		if (!$transactionsList || !$transactionsList['items']) {
+                    			// log curl_results and curl request
+                    			$log = [
+                        			'curl_results' => $curl_results,
+                        			'curl_request' => $url_transactions . '?' . $get_params,
+                    			];
+		                	throw new \Exception('[php-oara][Oara][Network][Publisher][TradeDoubler][getTransactionList] invalid response: ' . json_encode($log));
+                		}
 				foreach ($transactionsList['items'] as $transactionJson) {
 
 					$transaction = Array();
