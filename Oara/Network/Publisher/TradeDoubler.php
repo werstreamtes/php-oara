@@ -85,12 +85,14 @@ class TradeDoubler extends \Oara\Network
 			curl_setopt($ch, CURLOPT_HTTPHEADER, array("Authorization: Basic " . $apiKey, "Content-Type: application/x-www-form-urlencoded"));
 
 			$curl_results = curl_exec($ch);
+			$curl_info = curl_getinfo($ch);
+
 			curl_close($ch);
 			$response = json_decode($curl_results);
 			if ($response) {
 				if (isset($response->error)) {
 					if (isset($response->error_description)) {
-						throw new \Exception('[php-oara][Oara][Network][Publisher][TradeDoubler][getToken] ' . $curl_results);
+						throw new \Exception('[php-oara][Oara][Network][Publisher][TradeDoubler][getToken] ' . $curl_results . ' ; curl_info: ' . json_encode($curl_info));
 					}
 				}
 				if (isset($response->access_token)) {
