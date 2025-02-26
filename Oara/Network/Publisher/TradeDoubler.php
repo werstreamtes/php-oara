@@ -83,6 +83,7 @@ class TradeDoubler extends \Oara\Network
 			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
 			curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
 			curl_setopt($ch, CURLOPT_HTTPHEADER, array("Authorization: Basic " . $apiKey, "Content-Type: application/x-www-form-urlencoded"));
+			curl_setopt($ch, CURLINFO_HEADER_OUT, true);
 
 			$curl_results = curl_exec($ch);
 			$curl_info = curl_getinfo($ch);
