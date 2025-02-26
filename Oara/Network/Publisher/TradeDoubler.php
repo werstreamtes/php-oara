@@ -90,7 +90,7 @@ class TradeDoubler extends \Oara\Network
 			if ($response) {
 				if (isset($response->error)) {
 					if (isset($response->error_description)) {
-						throw new \Exception('[php-oara][Oara][Network][Publisher][TradeDoubler][getToken] ' . $response->error_description);
+						throw new \Exception('[php-oara][Oara][Network][Publisher][TradeDoubler][getToken] ' . $curl_results);
 					}
 				}
 				if (isset($response->access_token)) {
