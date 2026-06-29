@@ -36,6 +36,19 @@ class AvantLink extends \Oara\Network
     private $_apikey = null;
 
     /**
+     * AvantLink merchant exports require PhpSpreadsheet at runtime.
+     */
+    private function requirePhpSpreadsheet()
+    {
+        if (!\class_exists('\PhpOffice\PhpSpreadsheet\IOFactory')) {
+            throw new \Exception(
+                'AvantLink requires the optional package phpoffice/phpspreadsheet:^1.30.5. ' .
+                'Install it to use AvantLink providers on PHP 7.4+.'
+            );
+        }
+    }
+
+    /**
      * Constructor and Login
      * @param $credentials
      * @return ShareASale
@@ -110,6 +123,7 @@ class AvantLink extends \Oara\Network
      */
     public function getMerchantList()
     {
+        $this->requirePhpSpreadsheet();
 
         $merchants = array();
 

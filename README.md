@@ -135,6 +135,9 @@ To run php-oara you will need to use PHP 5.3, and enable the CURL extension in y
 
 Also you will need to have GIT installed in your computer.
 
+Some providers have optional extra dependencies. In particular, `AvantLink`, `AvantLink\CA`, `AvantLink\USA`, and `Bol`
+need `phpoffice/phpspreadsheet:^1.30.5`, which in turn requires PHP 7.4+.
+
 Getting Started
 -----------
 
@@ -156,6 +159,10 @@ for the different networks.
 	curl -s https://getcomposer.org/installer | php --
 	php composer.phar self-update
 	php composer.phar install
+
+	4. Install optional provider dependencies when needed
+
+	composer require phpoffice/phpspreadsheet:^1.30.5
 
 	5. test.php
 
@@ -316,5 +323,4 @@ Contact
 
 If you have any question, go to the project's [website](http://php-oara.affjet.com/) or
 send an email to support@affjet.com
-
 

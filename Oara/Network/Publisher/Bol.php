@@ -34,6 +34,19 @@ class Bol extends \Oara\Network
     private $_client = null;
 
     /**
+     * Bol spreadsheet exports require PhpSpreadsheet at runtime.
+     */
+    private function requirePhpSpreadsheet()
+    {
+        if (!\class_exists('\PhpOffice\PhpSpreadsheet\IOFactory')) {
+            throw new \Exception(
+                'Bol requires the optional package phpoffice/phpspreadsheet:^1.30.5. ' .
+                'Install it to use Bol on PHP 7.4+.'
+            );
+        }
+    }
+
+    /**
      * @param $credentials
      */
     public function login($credentials)
@@ -117,6 +130,8 @@ class Bol extends \Oara\Network
      */
     public function getTransactionList($merchantList = null, \DateTime $dStartDate = null, \DateTime $dEndDate = null)
     {
+        $this->requirePhpSpreadsheet();
+
         $folder = \realpath(\dirname(COOKIES_BASE_DIR)) . '/pdf/';
         $totalTransactions = array();
         $valuesFromExport = array();
