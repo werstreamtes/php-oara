@@ -5,7 +5,10 @@
     "require": {
         "php": ">=5.3.0",
         "ext-curl": "*",
-        "zendframework/zend-dom": "*"
+        "ext-dom": "*",
+        "ext-libxml": "*",
+        "ext-simplexml": "*",
+        "ext-xml": "*"
     },
     "suggest": {
         "phpoffice/phpspreadsheet": "Required for spreadsheet-based providers such as AvantLink and Bol. Install ^1.30.5 on PHP 7.4+."
