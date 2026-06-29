@@ -129,7 +129,7 @@ class AvantLink extends \Oara\Network
         \fwrite($handle, $data);
         \fclose($handle);
 
-        $objReader = \PhpOffice\PhpSpreadsheet\IOFactory::createReader('Excel5');
+        $objReader = \PhpOffice\PhpSpreadsheet\IOFactory::createReader('Xls');
         $objReader->setReadDataOnly(true);
         $objPHPExcel = $objReader->load($my_file);
         $objWorksheet = $objPHPExcel->getActiveSheet();

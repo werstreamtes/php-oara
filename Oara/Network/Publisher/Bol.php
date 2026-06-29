@@ -138,7 +138,7 @@ class Bol extends \Oara\Network
         \fwrite($handle, $data);
         \fclose($handle);
 
-        $objReader = \PhpOffice\PhpSpreadsheet\IOFactory::createReader('Excel2007');
+        $objReader = \PhpOffice\PhpSpreadsheet\IOFactory::createReader('Xlsx');
         $objReader->setReadDataOnly(true);
         $objPHPExcel = $objReader->load($my_file);
         $objWorksheet = $objPHPExcel->getActiveSheet();
